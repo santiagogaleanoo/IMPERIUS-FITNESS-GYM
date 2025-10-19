@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, X, User, LogOut } from "lucide-react"
+import { Menu, X, User, LogOut, ChevronDown } from "lucide-react"
 import Image from "next/image"
 import { CartDrawer } from "@/components/carrito-compras"
 import { useAuth } from "@/contexts/contexto-autenticacion"
@@ -24,27 +24,43 @@ export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [isCategoríasDropdownOpen, setIsCategoríasDropdownOpen] = useState(false)
   const { user, logout, isAuthenticated } = useAuth()
   const pathname = usePathname()
 
-  const handleUneteAhora = () => {
-    setIsMenuOpen(false)
-    if (pathname === "/") {
-      document.getElementById("membresias")?.scrollIntoView({ behavior: "smooth" })
-    } else {
-      window.location.href = "/#membresias"
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Cierra el menú desplegable al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsCategoríasDropdownOpen(false)
+      }
     }
-  }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
-  // Función para confirmar el cierre de sesión
-  const handleLogoutClick = () => {
-    setShowLogoutConfirm(true)
-  }
-
-  // Función para ejecutar el cierre de sesión
+  // Cierre de sesión
+  const handleLogoutClick = () => setShowLogoutConfirm(true)
   const confirmLogout = () => {
     logout()
     setShowLogoutConfirm(false)
+  }
+
+  // Navegación a secciones
+  const navigateToSection = (sectionId: string) => {
+    setIsMenuOpen(false)
+    setIsCategoríasDropdownOpen(false)
+    if (sectionId === "inicio") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
+    if (pathname === "/") {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" })
+    } else {
+      window.location.href = `/#${sectionId}`
+    }
   }
 
   return (
@@ -52,7 +68,7 @@ export function Header() {
       <header className="fixed top-0 left-0 right-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-primary/20">
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between h-16">
-            {/* Logo del gimnasio */}
+            {/* Logo */}
             <Link href="/" className="flex items-center gap-3 flex-shrink-0">
               <Image
                 src="/imperius-logo.png"
@@ -64,11 +80,50 @@ export function Header() {
               <div className="text-2xl font-bebas text-primary tracking-wider">IMPERIUS FITNESS GYM</div>
             </Link>
 
-            {/* Navegación Desktop - Centrada */}
+            {/* Navegación Desktop */}
             <nav className="hidden md:flex items-center gap-8 absolute left-1/2 transform -translate-x-1/2">
-              <Link href="/" className="text-secondary-foreground hover:text-primary transition-colors font-medium">
-                Inicio
-              </Link>
+              {/* Menú desplegable Categorías */}
+              <div ref={dropdownRef} className="relative">
+                <button
+                  className="flex items-center gap-1 text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  onClick={() => setIsCategoríasDropdownOpen(!isCategoríasDropdownOpen)}
+                >
+                  Categorías
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform ${isCategoríasDropdownOpen ? "rotate-180" : ""}`}
+                  />
+                </button>
+
+                {isCategoríasDropdownOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-52 bg-secondary border border-primary/20 rounded-lg shadow-lg py-2 z-50">
+                    <button
+                      onClick={() => navigateToSection("inicio")}
+                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                    >
+                      Menú Principal
+                    </button>
+                    <button
+                      onClick={() => navigateToSection("productos-destacados")}
+                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                    >
+                      Productos Destacados
+                    </button>
+                    <button
+                      onClick={() => navigateToSection("instalaciones")}
+                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                    >
+                      Nuestras Instalaciones
+                    </button>
+                    <button
+                      onClick={() => navigateToSection("quienes-somos")}
+                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                    >
+                      Quiénes Somos
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <Link
                 href="/#membresias"
                 className="text-secondary-foreground hover:text-primary transition-colors font-medium"
@@ -95,12 +150,14 @@ export function Header() {
               </Link>
             </nav>
 
-            {/* Botones de acción (Carrito, Login, Únete) */}
+            {/* Botones de acción */}
             <div className="hidden md:flex items-center gap-2 flex-shrink-0">
               <CartDrawer />
               {isAuthenticated ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-secondary-foreground font-medium text-sm">Hola, {user?.name}</span>
+                  <span className="text-secondary-foreground font-medium text-sm">
+                    Hola, {user?.name}
+                  </span>
                   <Button
                     variant="outline"
                     size="icon"
@@ -122,8 +179,11 @@ export function Header() {
               )}
             </div>
 
-            {/* Botón de menú móvil */}
-            <button className="md:hidden text-secondary-foreground" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {/* Botón menú móvil */}
+            <button
+              className="md:hidden text-secondary-foreground"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
@@ -132,41 +192,49 @@ export function Header() {
           {isMenuOpen && (
             <div className="md:hidden py-3 border-t border-primary/20">
               <nav className="flex flex-col gap-4">
-                <Link
-                  href="/"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Inicio
-                </Link>
-                <Link
-                  href="/#membresias"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
+                <div className="border-b border-primary/20 pb-2">
+                  <div className="text-secondary-foreground font-medium mb-2">Categorías</div>
+                  <div className="flex flex-col gap-2 ml-4">
+                    <button
+                      onClick={() => navigateToSection("inicio")}
+                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                    >
+                      Menú Principal
+                    </button>
+                    <button
+                      onClick={() => navigateToSection("productos-destacados")}
+                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                    >
+                      Productos Destacados
+                    </button>
+                    <button
+                      onClick={() => navigateToSection("instalaciones")}
+                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                    >
+                      Nuestras Instalaciones
+                    </button>
+                    <button
+                      onClick={() => navigateToSection("quienes-somos")}
+                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                    >
+                      Quiénes Somos
+                    </button>
+                  </div>
+                </div>
+
+                <Link href="/#membresias" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
                   Membresías
                 </Link>
-                <Link
-                  href="/tienda"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
+                <Link href="/tienda" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
                   Tienda
                 </Link>
-                <Link
-                  href="/galeria"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
+                <Link href="/galeria" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
                   Galería
                 </Link>
-                <Link
-                  href="/#contacto"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
-                >
+                <Link href="/#contacto" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
                   Contacto
                 </Link>
+
                 {isAuthenticated ? (
                   <>
                     <div className="text-secondary-foreground font-medium">Hola, {user?.name}</div>
@@ -189,17 +257,16 @@ export function Header() {
                     Iniciar Sesión
                   </Button>
                 )}
-                
               </nav>
             </div>
           )}
         </div>
       </header>
 
-      {/* Diálogo de autenticación (Login/Registro) */}
+      {/* Diálogo de autenticación */}
       <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} />
 
-      {/* Diálogo de confirmación para cerrar sesión */}
+      {/* Confirmación de cierre de sesión */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
