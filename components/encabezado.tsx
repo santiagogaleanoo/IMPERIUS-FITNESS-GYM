@@ -23,39 +23,42 @@ import {
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [authMode, setAuthMode] = useState<"login" | "register">("login")
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
-  const [isCategoríasDropdownOpen, setIsCategoríasDropdownOpen] = useState(false)
+  const [isApartadosDropdownOpen, setIsApartadosDropdownOpen] = useState(false)
+
   const { user, logout, isAuthenticated } = useAuth()
   const pathname = usePathname()
-
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Cierra el menú desplegable al hacer clic fuera
+  // Cerrar menú desplegable al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsCategoríasDropdownOpen(false)
+        setIsApartadosDropdownOpen(false)
       }
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Cierre de sesión
+  // Confirmación de cierre de sesión
   const handleLogoutClick = () => setShowLogoutConfirm(true)
   const confirmLogout = () => {
     logout()
     setShowLogoutConfirm(false)
   }
 
-  // Navegación a secciones
+  // Navegación a secciones del home
   const navigateToSection = (sectionId: string) => {
     setIsMenuOpen(false)
-    setIsCategoríasDropdownOpen(false)
+    setIsApartadosDropdownOpen(false)
+
     if (sectionId === "inicio") {
       window.scrollTo({ top: 0, behavior: "smooth" })
       return
     }
+
     if (pathname === "/") {
       document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" })
     } else {
@@ -82,19 +85,19 @@ export function Header() {
 
             {/* Navegación Desktop */}
             <nav className="hidden md:flex items-center gap-8 absolute left-1/2 transform -translate-x-1/2">
-              {/* Menú desplegable Categorías */}
+              {/* Menú desplegable Apartados */}
               <div ref={dropdownRef} className="relative">
                 <button
                   className="flex items-center gap-1 text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsCategoríasDropdownOpen(!isCategoríasDropdownOpen)}
+                  onClick={() => setIsApartadosDropdownOpen(!isApartadosDropdownOpen)}
                 >
-                  Categorías
+                  Apartados
                   <ChevronDown
-                    className={`h-4 w-4 transition-transform ${isCategoríasDropdownOpen ? "rotate-180" : ""}`}
+                    className={`h-4 w-4 transition-transform ${isApartadosDropdownOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
-                {isCategoríasDropdownOpen && (
+                {isApartadosDropdownOpen && (
                   <div className="absolute top-full left-0 mt-2 w-52 bg-secondary border border-primary/20 rounded-lg shadow-lg py-2 z-50">
                     <button
                       onClick={() => navigateToSection("inicio")}
@@ -168,14 +171,28 @@ export function Header() {
                   </Button>
                 </div>
               ) : (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowAuthDialog(true)}
-                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold h-8 px-3 text-sm"
-                >
-                  <User className="mr-1 h-4 w-4" />
-                  Iniciar Sesión
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setAuthMode("login")
+                      setShowAuthDialog(true)
+                    }}
+                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold h-8 px-3 text-sm"
+                  >
+                    <User className="mr-1 h-4 w-4" />
+                    Iniciar Sesión
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setAuthMode("register")
+                      setShowAuthDialog(true)
+                    }}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-8 px-3 text-sm"
+                  >
+                    Registrarse
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -193,7 +210,7 @@ export function Header() {
             <div className="md:hidden py-3 border-t border-primary/20">
               <nav className="flex flex-col gap-4">
                 <div className="border-b border-primary/20 pb-2">
-                  <div className="text-secondary-foreground font-medium mb-2">Categorías</div>
+                  <div className="text-secondary-foreground font-medium mb-2">Apartados</div>
                   <div className="flex flex-col gap-2 ml-4">
                     <button
                       onClick={() => navigateToSection("inicio")}
@@ -222,22 +239,40 @@ export function Header() {
                   </div>
                 </div>
 
-                <Link href="/#membresias" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
+                <Link
+                  href="/#membresias"
+                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Membresías
                 </Link>
-                <Link href="/tienda" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
+                <Link
+                  href="/tienda"
+                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Tienda
                 </Link>
-                <Link href="/galeria" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
+                <Link
+                  href="/galeria"
+                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Galería
                 </Link>
-                <Link href="/#contacto" className="text-secondary-foreground hover:text-primary transition-colors font-medium" onClick={() => setIsMenuOpen(false)}>
+                <Link
+                  href="/#contacto"
+                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  onClick={() => setIsMenuOpen(false)}
+                >
                   Contacto
                 </Link>
 
                 {isAuthenticated ? (
                   <>
-                    <div className="text-secondary-foreground font-medium">Hola, {user?.name}</div>
+                    <div className="text-secondary-foreground font-medium">
+                      Hola, {user?.name}
+                    </div>
                     <Button
                       variant="outline"
                       onClick={handleLogoutClick}
@@ -248,14 +283,30 @@ export function Header() {
                     </Button>
                   </>
                 ) : (
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowAuthDialog(true)}
-                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full"
-                  >
-                    <User className="mr-2 h-4 w-4" />
-                    Iniciar Sesión
-                  </Button>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setAuthMode("login")
+                        setShowAuthDialog(true)
+                        setIsMenuOpen(false)
+                      }}
+                      className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full"
+                    >
+                      Iniciar Sesión
+                    </Button>
+
+                    <Button
+                      onClick={() => {
+                        setAuthMode("register")
+                        setShowAuthDialog(true)
+                        setIsMenuOpen(false)
+                      }}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
+                    >
+                      Registrarse
+                    </Button>
+                  </div>
                 )}
               </nav>
             </div>
@@ -264,7 +315,7 @@ export function Header() {
       </header>
 
       {/* Diálogo de autenticación */}
-      <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} />
+      <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} defaultTab={authMode} />
 
       {/* Confirmación de cierre de sesión */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
@@ -272,7 +323,7 @@ export function Header() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro que deseas cerrar sesión? Tu carrito se guardará para cuando vuelvas.
+              ¿Estás seguro de que deseas cerrar sesión? Tu carrito se guardará para cuando vuelvas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
