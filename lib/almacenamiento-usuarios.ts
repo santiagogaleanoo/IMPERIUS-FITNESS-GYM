@@ -12,6 +12,7 @@ export interface RegisteredUser {
   createdAt: string
   esEstudiante: boolean
   verificacionEstudiantePendiente: boolean
+  fechaVerificacion?: string // NUEVO
   documentosVerificacion?: {
     tipoVerificacion: "carnet" | "portal-edu" | "boletin"
     archivos: string[]
@@ -40,6 +41,10 @@ export class UserStorage {
     if (typeof window === "undefined") return []
     const data = localStorage.getItem(STORAGE_KEY)
     return data ? JSON.parse(data) : []
+  }
+
+  static getAllUsers(): RegisteredUser[] {
+    return this.getUsers()
   }
 
   // Guardar usuarios
@@ -148,6 +153,86 @@ export class UserStorage {
     return true
   }
 
+  // ✅ NUEVO MÉTODO: Sincronizar contraseña desde PHP
+  static actualizarContrasenaDesdePHP(email: string, nuevaContrasena: string): boolean {
+    const users = this.getUsers()
+    const userIndex = users.findIndex((u) => u.email.toLowerCase() === email.toLowerCase())
+
+    if (userIndex === -1) {
+      console.log(`[v0] ⚠️ Usuario ${email} no encontrado en localStorage, pero se actualizó en PHP`);
+      
+      // Opcional: Crear usuario básico si no existe
+      const nuevoUsuario: RegisteredUser = {
+        id: `user_php_${Date.now()}`,
+        name: "Usuario",
+        lastName: "Recuperación",
+        documentType: "CC",
+        documentNumber: "000000",
+        email: email,
+        password: nuevaContrasena,
+        createdAt: new Date().toISOString(),
+        esEstudiante: false,
+        verificacionEstudiantePendiente: false,
+      }
+      
+      users.push(nuevoUsuario);
+      this.saveUsers(users);
+      console.log(`[v0] ✅ Usuario creado en localStorage: ${email}`);
+      return true;
+    }
+
+    users[userIndex].password = nuevaContrasena;
+    this.saveUsers(users);
+
+    console.log(`[v0] ✅ Contraseña sincronizada en localStorage para: ${email}`);
+    return true;
+  }
+
+  // ✅ NUEVO MÉTODO: Marcar verificación como pendiente
+  static marcarVerificacionPendiente(userId: string): void {
+    const users = this.getUsers();
+    const userIndex = users.findIndex((u) => u.id === userId);
+
+    if (userIndex !== -1) {
+      users[userIndex].verificacionEstudiantePendiente = true;
+      this.saveUsers(users);
+      console.log(`[v0] ✅ Verificación marcada como pendiente para usuario: ${userId}`);
+    }
+  }
+
+  // ✅ NUEVO MÉTODO: Aprobar verificación de estudiante
+  static aprobarVerificacionEstudiante(userId: string): void {
+    const users = this.getUsers();
+    const userIndex = users.findIndex((u) => u.id === userId);
+
+    if (userIndex === -1) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    users[userIndex].esEstudiante = true;
+    users[userIndex].verificacionEstudiantePendiente = false;
+    
+    // Agregar fecha de verificación
+    users[userIndex].fechaVerificacion = new Date().toISOString();
+
+    this.saveUsers(users);
+    console.log(`[v0] ✅ Usuario verificado como estudiante: ${userId}`);
+  }
+
+  // ✅ NUEVO MÉTODO: Rechazar verificación de estudiante
+  static rechazarVerificacionEstudiante(userId: string): void {
+    const users = this.getUsers();
+    const userIndex = users.findIndex((u) => u.id === userId);
+
+    if (userIndex === -1) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    users[userIndex].verificacionEstudiantePendiente = false;
+    this.saveUsers(users);
+    console.log(`[v0] ❌ Verificación rechazada para usuario: ${userId}`);
+  }
+
   // Exportar datos (para migración a base de datos)
   static exportData(): string {
     return JSON.stringify(this.getUsers(), null, 2)
@@ -172,24 +257,23 @@ export class UserStorage {
     console.log("[v0] ========================================")
   }
 
-  static aprobarVerificacionEstudiante(userId: string): void {
-    const users = this.getUsers()
-    const userIndex = users.findIndex((u) => u.id === userId)
-
-    if (userIndex === -1) {
-      throw new Error("Usuario no encontrado")
-    }
-
-    users[userIndex].esEstudiante = true
-    users[userIndex].verificacionEstudiantePendiente = false
-
-    this.saveUsers(users)
-  }
-
   static esUsuarioEstudiante(userId: string): boolean {
     const users = this.getUsers()
     const user = users.find((u) => u.id === userId)
     return user?.esEstudiante || false
+  }
+
+  // ✅ NUEVO MÉTODO: Verificar si un usuario tiene verificación pendiente
+  static tieneVerificacionPendiente(userId: string): boolean {
+    const users = this.getUsers()
+    const user = users.find((u) => u.id === userId)
+    return user?.verificacionEstudiantePendiente || false
+  }
+
+  // ✅ NUEVO MÉTODO: Obtener información completa del usuario
+  static getUsuarioCompleto(userId: string): RegisteredUser | null {
+    const users = this.getUsers()
+    return users.find((u) => u.id === userId) || null
   }
 }
 

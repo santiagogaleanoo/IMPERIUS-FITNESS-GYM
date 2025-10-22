@@ -10,135 +10,119 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2, Loader2, KeyRound, Mail } from "lucide-react"
 import { UserStorage } from "@/lib/almacenamiento-usuarios"
 
-// Componente para recuperar contraseña olvidada mediante email
 interface RecuperacionContrasenaDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function RecuperacionContrasenaDialog({ open, onOpenChange }: RecuperacionContrasenaDialogProps) {
-  // Estados para el flujo de recuperación
   const [paso, setPaso] = useState<"email" | "enviado" | "cambiar">("email")
   const [email, setEmail] = useState("")
   const [nuevaContrasena, setNuevaContrasena] = useState("")
   const [confirmarContrasena, setConfirmarContrasena] = useState("")
   const [codigoVerificacion, setCodigoVerificacion] = useState("")
-  const [codigoGenerado, setCodigoGenerado] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // Reiniciar el diálogo al cerrar
   const handleClose = () => {
     setPaso("email")
     setEmail("")
     setNuevaContrasena("")
     setConfirmarContrasena("")
     setCodigoVerificacion("")
-    setCodigoGenerado("")
     setError("")
     onOpenChange(false)
   }
 
-  // Paso 1: Enviar código de verificación al email
-  const handleEnviarCodigo = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    setIsLoading(true)
+  // Paso 1: Enviar código usando PHP - PARA CUALQUIER EMAIL
+const handleEnviarCodigo = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setError("")
+  setIsLoading(true)
 
-    // Simular delay de red
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+  try {
+    // ✅ ELIMINAR esta validación para permitir cualquier email
+    // const usuario = UserStorage.getUserByEmail(email)
+    // if (!usuario) {
+    //   throw new Error("No existe una cuenta con este email")
+    // }
 
-    try {
-      const usuario = UserStorage.getUserByEmail(email)
+    // ✅ ENVIAR CÓDIGO A CUALQUIER EMAIL (sin verificar existencia)
+    const response = await fetch("http://localhost/php/forgot-password.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: email }),
+    })
 
-      if (!usuario) {
-        throw new Error("No existe una cuenta con este email")
-      }
+    const resultado = await response.json()
 
-      // Generar código de 6 dígitos
-      const codigo = Math.floor(100000 + Math.random() * 900000).toString()
-      setCodigoGenerado(codigo)
-
-      // Por ahora, mostrar el código en consola para desarrollo
-      console.log("=".repeat(60))
-      console.log("📧 EMAIL DE RECUPERACIÓN DE CONTRASEÑA")
-      console.log("=".repeat(60))
-      console.log(`Para: ${email}`)
-      console.log(`Asunto: Recupera tu contraseña - Imperius Fitness Gym`)
-      console.log("")
-      console.log("Hola,")
-      console.log("")
-      console.log("Recibimos una solicitud para recuperar tu contraseña.")
-      console.log("")
-      console.log(`Tu código de verificación es: ${codigo}`)
-      console.log("")
-      console.log("Este código expira en 15 minutos.")
-      console.log("")
-      console.log("Si no solicitaste este cambio, ignora este mensaje.")
-      console.log("")
-      console.log("Saludos,")
-      console.log("Equipo Imperius Fitness Gym")
-      console.log("=".repeat(60))
-
-      setPaso("enviado")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al enviar código")
-    } finally {
-      setIsLoading(false)
+    if (!resultado.success) {
+      throw new Error(resultado.message || "Error al enviar código")
     }
+
+    setPaso("enviado")
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Error al enviar código")
+  } finally {
+    setIsLoading(false)
   }
+}
 
   // Paso 2: Verificar código y cambiar contraseña
-  const handleCambiarContrasena = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
+const handleCambiarContrasena = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setError("")
 
-    if (codigoVerificacion !== codigoGenerado) {
-      setError("Código de verificación incorrecto")
-      return
-    }
-
-    if (nuevaContrasena !== confirmarContrasena) {
-      setError("Las contraseñas no coinciden")
-      return
-    }
-
-    if (nuevaContrasena.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres")
-      return
-    }
-
-    setIsLoading(true)
-
-    // Simular delay de red
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    try {
-      const usuario = UserStorage.getUserByEmail(email)
-      if (!usuario) {
-        throw new Error("Usuario no encontrado")
-      }
-
-      // Actualizar la contraseña
-      const usuarios = UserStorage.getAllUsers()
-      const index = usuarios.findIndex((u) => u.email === email)
-      if (index !== -1) {
-        usuarios[index].password = nuevaContrasena
-        localStorage.setItem("imperius_users", JSON.stringify(usuarios))
-      }
-
-      setPaso("cambiar")
-
-      // Cerrar después de 2 segundos
-      setTimeout(() => {
-        handleClose()
-      }, 2000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error al cambiar contraseña")
-    } finally {
-      setIsLoading(false)
-    }
+  if (nuevaContrasena !== confirmarContrasena) {
+    setError("Las contraseñas no coinciden")
+    return
   }
+
+  if (nuevaContrasena.length < 6) {
+    setError("La contraseña debe tener al menos 6 caracteres")
+    return
+  }
+
+  setIsLoading(true)
+
+  try {
+    // 1. VERIFICAR CÓDIGO con PHP
+    const verifyResponse = await fetch("http://localhost/php/verify-code.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: email, codigo: codigoVerificacion }),
+    })
+
+    const verifyResult = await verifyResponse.json()
+
+    if (!verifyResult.success) {
+      throw new Error(verifyResult.message || "Código incorrecto")
+    }
+
+    // 2. ACTUALIZAR CONTRASEÑA en PHP
+    const updateResponse = await fetch("http://localhost/php/update-password.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ correo: email, nueva: nuevaContrasena }),
+    })
+
+    const updateResult = await updateResponse.json()
+
+    if (!updateResult.success) {
+      throw new Error(updateResult.message || "Error al cambiar contraseña")
+    }
+
+    // 3. SINCRONIZAR con localStorage (opcional, para consistencia)
+    UserStorage.actualizarContrasenaDesdePHP(email, nuevaContrasena)
+
+    setPaso("cambiar")
+    setTimeout(() => handleClose(), 2000)
+  } catch (err) {
+    setError(err instanceof Error ? err.message : "Error en el proceso")
+  } finally {
+    setIsLoading(false)
+  }
+}
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -207,7 +191,7 @@ export function RecuperacionContrasenaDialog({ open, onOpenChange }: Recuperacio
                 Hemos enviado un código de verificación a <strong>{email}</strong>
                 <br />
                 <span className="text-xs mt-1 block">
-                  (En desarrollo: revisa la consola del navegador para ver el código)
+                  Revisa tu bandeja de entrada y spam
                 </span>
               </AlertDescription>
             </Alert>
