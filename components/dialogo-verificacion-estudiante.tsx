@@ -14,27 +14,22 @@ import { UserStorage } from "@/lib/almacenamiento-usuarios-simple"
 interface VerificacionEstudianteDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onVerificacionEnviada?: () => void // <-- prop opcional para notificar al padre
 }
 
-export function VerificacionEstudianteDialog({
-  open,
-  onOpenChange,
-  onVerificacionEnviada,
-}: VerificacionEstudianteDialogProps) {
+export function VerificacionEstudianteDialog({ open, onOpenChange }: VerificacionEstudianteDialogProps) {
   const { user, refreshUser, forceRefreshUser } = useAuth()
   const { toast } = useToast()
   const [selectedOption, setSelectedOption] = useState<"carnet" | "portal-edu" | "boletin">("carnet")
   const [isLoading, setIsLoading] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
 
-  // Manejar subida de archivos
+  // ✅ Manejar subida de archivos
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
     setUploadedFiles(files)
   }
 
-  // Convertir archivos a Base64 para almacenamiento local
+  // ✅ Convertir archivos a Base64 para almacenamiento local
   const convertToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -44,7 +39,7 @@ export function VerificacionEstudianteDialog({
     })
   }
 
-  // Envío principal con respaldo local + PHP
+  // ✅ Envío principal con respaldo local + PHP
   const handleSubmit = async () => {
     if (!user) {
       toast({
@@ -81,11 +76,15 @@ export function VerificacionEstudianteDialog({
       formData.append("email", user.email)
       formData.append("nombre", `${user.name} ${user.lastName}`)
       formData.append("tipoVerificacion", selectedOption)
-      uploadedFiles.forEach((file) => formData.append("archivos", file))
+
+      uploadedFiles.forEach((file) => {
+        formData.append("archivos", file) // ✅ corregido: sin []
+      })
 
       console.log("📤 Enviando verificación a PHP...")
 
       let phpSuccess = false
+      let phpError = null
 
       try {
         const response = await fetch("http://localhost/php/send-mail.php", {
@@ -98,10 +97,12 @@ export function VerificacionEstudianteDialog({
           console.log("✅ PHP respondió:", result)
           phpSuccess = result.success === true
         } else {
-          console.warn("⚠️ PHP respondió con error:", `HTTP ${response.status}: ${response.statusText}`)
+          phpError = `HTTP ${response.status}: ${response.statusText}`
+          console.warn("⚠️ PHP respondió con error:", phpError)
         }
       } catch (fetchError) {
-        console.warn("⚠️ Error de conexión con PHP:", fetchError)
+        phpError = fetchError instanceof Error ? fetchError.message : 'Error desconocido'
+        console.warn("⚠️ Error de conexión con PHP:", phpError)
       }
 
       // 3️⃣ Notificar al usuario
@@ -110,7 +111,6 @@ export function VerificacionEstudianteDialog({
           title: "✅ Verificación enviada",
           description: "Tu solicitud ha sido enviada correctamente. Revisa tu correo.",
         })
-        onVerificacionEnviada?.() // <-- notificar al componente padre
       } else {
         toast({
           title: "⚠️ Guardado localmente",
@@ -138,7 +138,7 @@ export function VerificacionEstudianteDialog({
     }
   }
 
-  // Envío en segundo plano (no bloquea la UI)
+  // ✅ Envío en segundo plano (no bloquea la UI)
   const enviarFondoAPHP = async (user: any, selectedOption: string, uploadedFiles: File[]) => {
     try {
       const formData = new FormData()
@@ -146,7 +146,10 @@ export function VerificacionEstudianteDialog({
       formData.append("email", user.email)
       formData.append("userId", user.id)
       formData.append("tipoVerificacion", selectedOption)
-      uploadedFiles.forEach((file) => formData.append("archivos", file))
+
+      uploadedFiles.forEach((file) => {
+        formData.append("archivos", file)
+      })
 
       const phpUrl = "http://localhost/php/send-mail.php"
       console.log("📤 Intentando enviar en segundo plano:", phpUrl)
@@ -167,7 +170,7 @@ export function VerificacionEstudianteDialog({
     }
   }
 
-  // Interfaz de usuario
+  // ✅ Interfaz de usuario
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -179,11 +182,7 @@ export function VerificacionEstudianteDialog({
         </DialogHeader>
 
         {/* Tabs de opciones */}
-        <Tabs
-          defaultValue="carnet"
-          className="w-full"
-          onValueChange={(value) => setSelectedOption(value as "carnet" | "portal-edu" | "boletin")}
-        >
+        <Tabs defaultValue="carnet" className="w-full" onValueChange={(value) => setSelectedOption(value as any)}>
           <TabsList className="grid w-full grid-cols-3 mb-6">
             <TabsTrigger value="carnet">Carnet Estudiantil</TabsTrigger>
             <TabsTrigger value="portal-edu">Portal Educativo</TabsTrigger>
@@ -247,6 +246,16 @@ export function VerificacionEstudianteDialog({
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-blue-800 mb-2">📋 ¿Qué necesitamos ver?</h4>
+                  <ul className="text-sm text-blue-700 space-y-1">
+                    <li>✅ Tu nombre completo</li>
+                    <li>✅ Nombre de la institución</li>
+                    <li>✅ Fecha actual o período académico</li>
+                    <li>✅ Estado de estudiante activo</li>
+                  </ul>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="portal-files">Capturas (JPG, PNG) *</Label>
                   <Input
@@ -256,7 +265,11 @@ export function VerificacionEstudianteDialog({
                     accept=".jpg,.jpeg,.png"
                     onChange={handleFileUpload}
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Sube capturas donde se vea claramente tu información estudiantil.
+                  </p>
                 </div>
+
                 {uploadedFiles.length > 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                     <p className="text-sm font-medium text-green-800">Archivos seleccionados:</p>
@@ -295,6 +308,9 @@ export function VerificacionEstudianteDialog({
                     accept=".jpg,.jpeg,.png,.pdf"
                     onChange={handleFileUpload}
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Debe ser del período académico actual o más reciente.
+                  </p>
                 </div>
                 {uploadedFiles.length > 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
