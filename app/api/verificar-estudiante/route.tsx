@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     /*
     const { data, error } = await resend.emails.send({
       from: 'Imperius Gym <noreply@imperiusgym.com>',
-      to: ['santiagis029@gmail.com'],
+      to: ['imperius.fitness.gym@gmail.com'],
       subject: 'Nueva Solicitud de Verificación de Estudiante',
       html: `
         <h2>Nueva Solicitud de Verificación</h2>
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
 
     // Por ahora, simular el envío
     console.log("========================================")
-    console.log("CORREO ENVIADO A: santiagis029@gmail.com")
+    console.log("CORREO ENVIADO A: imperius.fitness.gym@gmail.com")
     console.log("========================================")
     console.log("Usuario:", usuario.name, usuario.lastName)
     console.log("Email:", usuario.email)

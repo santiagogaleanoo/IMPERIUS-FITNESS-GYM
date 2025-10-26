@@ -44,7 +44,7 @@ const regularMemberships = [
     id: "membership-mensual",
     name: "MENSUAL",
     price: 65000,
-    description: "Entrena el muaculo y relaja el bolsillo ",
+    description: "Entrena el musculo y relaja el bolsillo ",
     image: "/imperius-logo-mensual.png",
     features: ["Acceso al gimnasio todo el mes", "Jueves: Funcional", "Viernes: Rumba terapia"],
     popular: true,
@@ -233,37 +233,45 @@ export function MembershipsSection() {
   }
 
   // ✅ FUNCIÓN MEJORADA: Actualizar el estado del estudiante
-  const handleRefreshStatus = async () => {
-    setIsRefreshing(true)
-    console.log("🔄 Actualizando estado de estudiante...")
+  // ✅ FUNCIÓN MEJORADA: Actualizar el estado del estudiante
+const handleRefreshStatus = async () => {
+  setIsRefreshing(true)
+  console.log("🔄 Actualizando estado de estudiante...")
+  
+  try {
+    // ✅ FORZAR ACTUALIZACIÓN INMEDIATA
+    await forceRefreshUser()
     
-    try {
-      await refreshUser()
-      await forceRefreshUser()
-      
-      // Verificar si hubo cambios
-      if (user?.esEstudiante) {
-        toast({
-          title: "✅ ¡Verificación aprobada!",
-          description: "Ahora puedes acceder a los descuentos estudiantiles",
-          duration: 5000,
-        })
-      } else if (!user?.verificacionEstudiantePendiente) {
-        toast({
-          title: "ℹ️ Estado actualizado",
-          description: "Tu verificación aún está en proceso o fue rechazada",
-        })
-      }
-    } catch (error) {
+    // Verificar si hubo cambios DESPUÉS de la actualización
+    const updatedUser = JSON.parse(localStorage.getItem("imperius_current_user") || "{}");
+    
+    if (updatedUser?.esEstudiante) {
       toast({
-        title: "❌ Error",
-        description: "No se pudo actualizar el estado",
-        variant: "destructive",
+        title: "✅ ¡Verificación aprobada!",
+        description: "Ahora puedes acceder a los descuentos estudiantiles",
+        duration: 5000,
       })
-    } finally {
-      setIsRefreshing(false)
+    } else if (!updatedUser?.verificacionEstudiantePendiente) {
+      toast({
+        title: "ℹ️ Estado actualizado",
+        description: "Tu verificación aún está en proceso o fue rechazada",
+      })
+    } else {
+      toast({
+        title: "⏳ Verificación pendiente",
+        description: "Tu solicitud sigue en revisión",
+      })
     }
+  } catch (error) {
+    toast({
+      title: "❌ Error",
+      description: "No se pudo actualizar el estado",
+      variant: "destructive",
+    })
+  } finally {
+    setIsRefreshing(false)
   }
+}
 
   // Función para renderizar una tarjeta de membresía
   const renderMembershipCard = (plan: MembershipPlan) => {

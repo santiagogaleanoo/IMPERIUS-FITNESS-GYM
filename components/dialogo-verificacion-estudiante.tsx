@@ -9,12 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/contexto-autenticacion"
-import { UserStorage } from "@/lib/almacenamiento-usuarios-simple"
+import { UserStorage } from "@/lib/almacenamiento-usuarios"
 
 interface VerificacionEstudianteDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onVerificacionEnviada?: () => void // <-- prop opcional para notificar al padre
+  onVerificacionEnviada?: () => void
 }
 
 export function VerificacionEstudianteDialog({
@@ -44,7 +44,7 @@ export function VerificacionEstudianteDialog({
     })
   }
 
-  // Envío principal con respaldo local + PHP
+  // ✅ FUNCIÓN MEJORADA: Envío principal con mejor manejo de estado
   const handleSubmit = async () => {
     if (!user) {
       toast({
@@ -67,27 +67,41 @@ export function VerificacionEstudianteDialog({
     setIsLoading(true)
 
     try {
-      // 1️⃣ Guardar localmente (respaldo)
+      console.log("========================================")
+      console.log("📤 INICIANDO ENVÍO DE VERIFICACIÓN")
+      console.log("========================================")
+      console.log("Usuario:", user.email)
+      console.log("Tipo de verificación:", selectedOption)
+      console.log("Archivos:", uploadedFiles.length)
+
+      // 1️⃣ GUARDAR LOCALMENTE PRIMERO (RESPALDO INMEDIATO)
       const archivosBase64: string[] = []
       for (const file of uploadedFiles) {
         const base64 = await convertToBase64(file)
         archivosBase64.push(base64)
       }
+
+      console.log("📁 Guardando en localStorage...")
       UserStorage.enviarVerificacionEstudiante(user.id, selectedOption, archivosBase64)
+      
+      // ✅ ACTUALIZACIÓN INMEDIATA DEL ESTADO LOCAL
+      forceRefreshUser()
+      refreshUser()
 
-      // 2️⃣ Enviar al servidor PHP
-      const formData = new FormData()
-      formData.append("userId", user.id)
-      formData.append("email", user.email)
-      formData.append("nombre", `${user.name} ${user.lastName}`)
-      formData.append("tipoVerificacion", selectedOption)
-      uploadedFiles.forEach((file) => formData.append("archivos", file))
+      console.log("✅ Estado local actualizado: VERIFICACIÓN PENDIENTE")
 
-      console.log("📤 Enviando verificación a PHP...")
-
+      // 2️⃣ ENVIAR AL SERVIDOR PHP (EN SEGUNDO PLANO)
       let phpSuccess = false
-
       try {
+        console.log("📧 Enviando correo al administrador...")
+        
+        const formData = new FormData()
+        formData.append("userId", user.id)
+        formData.append("email", user.email)
+        formData.append("nombre", `${user.name} ${user.lastName}`)
+        formData.append("tipoVerificacion", selectedOption)
+        uploadedFiles.forEach((file) => formData.append("archivos", file))
+
         const response = await fetch("http://localhost/php/send-mail.php", {
           method: "POST",
           body: formData,
@@ -98,39 +112,54 @@ export function VerificacionEstudianteDialog({
           console.log("✅ PHP respondió:", result)
           phpSuccess = result.success === true
         } else {
-          console.warn("⚠️ PHP respondió con error:", `HTTP ${response.status}: ${response.statusText}`)
+          console.warn("⚠️ PHP respondió con error:", response.status, response.statusText)
         }
       } catch (fetchError) {
         console.warn("⚠️ Error de conexión con PHP:", fetchError)
+        // NO ES CRÍTICO - EL SISTEMA LOCAL SIGUE FUNCIONANDO
       }
 
-      // 3️⃣ Notificar al usuario
+      // 3️⃣ NOTIFICAR AL USUARIO
       if (phpSuccess) {
         toast({
           title: "✅ Verificación enviada",
-          description: "Tu solicitud ha sido enviada correctamente. Revisa tu correo.",
+          description: "Tu solicitud ha sido enviada correctamente. Revisa tu correo para más información.",
+          duration: 5000,
         })
-        onVerificacionEnviada?.() // <-- notificar al componente padre
       } else {
         toast({
-          title: "⚠️ Guardado localmente",
-          description: "Tu solicitud se guardó, pero el correo podría no haberse enviado.",
+          title: "⚠️ Verificación guardada localmente",
+          description: "Tu solicitud se guardó correctamente, pero el correo podría no haberse enviado.",
           variant: "default",
         })
       }
 
-      // 4️⃣ Actualizar interfaz
-      forceRefreshUser()
+      // 4️⃣ ACTUALIZAR INTERFAZ Y CERRAR DIÁLOGO
+      onVerificacionEnviada?.()
+      
+      // Forzar actualización final
+      setTimeout(() => {
+        forceRefreshUser()
+        refreshUser()
+      }, 1000)
+
+      // Cerrar diálogo y limpiar
       onOpenChange(false)
       setUploadedFiles([])
+
+      console.log("========================================")
+      console.log("✅ PROCESO DE VERIFICACIÓN COMPLETADO")
+      console.log("========================================")
 
     } catch (error) {
       console.error("❌ Error crítico en verificación:", error)
       toast({
-        title: "⚠️ Error inesperado",
+        title: "❌ Error inesperado",
         description: "Hubo un problema, pero tu solicitud se guardó localmente.",
         variant: "destructive",
       })
+      
+      // Aún así cerrar el diálogo
       onOpenChange(false)
       setUploadedFiles([])
     } finally {
@@ -138,38 +167,17 @@ export function VerificacionEstudianteDialog({
     }
   }
 
-  // Envío en segundo plano (no bloquea la UI)
-  const enviarFondoAPHP = async (user: any, selectedOption: string, uploadedFiles: File[]) => {
-    try {
-      const formData = new FormData()
-      formData.append("nombre", `${user.name} ${user.lastName}`)
-      formData.append("email", user.email)
-      formData.append("userId", user.id)
-      formData.append("tipoVerificacion", selectedOption)
-      uploadedFiles.forEach((file) => formData.append("archivos", file))
-
-      const phpUrl = "http://localhost/php/send-mail.php"
-      console.log("📤 Intentando enviar en segundo plano:", phpUrl)
-
-      const response = await fetch(phpUrl, {
-        method: "POST",
-        body: formData,
-      })
-
-      if (response.ok) {
-        const result = await response.json()
-        console.log("✅ PHP respondió exitosamente:", result)
-      } else {
-        console.warn("⚠️ PHP no respondió correctamente, pero no se detiene el proceso local.")
-      }
-    } catch (phpError) {
-      console.log("ℹ️ Error en envío a PHP (no crítico):", phpError)
+  // ✅ FUNCIÓN MEJORADA: Limpiar cuando se cierre el diálogo
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      // Limpiar archivos cuando se cierra
+      setUploadedFiles([])
     }
+    onOpenChange(newOpen)
   }
 
-  // Interfaz de usuario
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-center">Verificación de Estudiante</DialogTitle>
@@ -256,6 +264,9 @@ export function VerificacionEstudianteDialog({
                     accept=".jpg,.jpeg,.png"
                     onChange={handleFileUpload}
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Debe incluir tu nombre completo y fecha actual
+                  </p>
                 </div>
                 {uploadedFiles.length > 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -295,6 +306,9 @@ export function VerificacionEstudianteDialog({
                     accept=".jpg,.jpeg,.png,.pdf"
                     onChange={handleFileUpload}
                   />
+                  <p className="text-sm text-muted-foreground">
+                    Debe ser del período académico actual o más reciente
+                  </p>
                 </div>
                 {uploadedFiles.length > 0 && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -313,7 +327,7 @@ export function VerificacionEstudianteDialog({
 
         {/* Botones */}
         <div className="flex justify-between items-center pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isLoading}>
             Cancelar
           </Button>
           <Button
@@ -332,14 +346,42 @@ export function VerificacionEstudianteDialog({
           </Button>
         </div>
 
-        {/* Aviso final */}
+        {/* Aviso final MEJORADO */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
           <p className="text-sm text-blue-800">
-            <strong>⚠️ Importante:</strong> Una vez enviada tu solicitud, aparecerá como "Verificación Pendiente". 
-            Te notificaremos por correo cuando sea aprobada. Mientras tanto podrás ver los planes estudiantiles 
-            pero no comprarlos hasta que tu verificación sea aprobada.
+            <strong>⚠️ Importante:</strong> Una vez enviada tu solicitud:
           </p>
+          <ul className="text-sm text-blue-800 mt-2 list-disc list-inside space-y-1">
+            <li>Aparecerá como <strong>"Verificación Pendiente"</strong></li>
+            <li>Podrás ver los planes estudiantiles pero <strong>no comprarlos</strong> hasta la aprobación</li>
+            <li>Te notificaremos por correo cuando sea aprobada</li>
+            <li>Usa el botón <strong>"Verificar Estado"</strong> para actualizar tu estado</li>
+          </ul>
         </div>
+
+        {/* Estado actual del usuario */}
+        {user && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+            <p className="text-sm font-medium text-gray-800">Estado actual:</p>
+            <div className="flex justify-between items-center mt-1">
+              <span className="text-sm text-gray-700">
+                {user.esEstudiante ? "✅ Estudiante Verificado" : 
+                 user.verificacionEstudiantePendiente ? "⏳ Verificación Pendiente" : "❌ No Verificado"}
+              </span>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  forceRefreshUser()
+                  refreshUser()
+                }}
+                className="text-xs"
+              >
+                Actualizar
+              </Button>
+            </div>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )
