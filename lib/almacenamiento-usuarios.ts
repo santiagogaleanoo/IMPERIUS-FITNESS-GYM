@@ -1,5 +1,5 @@
-// Este archivo maneja el almacenamiento local de usuarios
-// Nombre del archivo: imperius_users_database.json (simulado en localStorage)
+// almacenamiento-usuarios.ts - VERSIÓN CORREGIDA
+// Base de datos local para el sistema de verificación estudiantil
 
 export interface RegisteredUser {
   id: string
@@ -12,7 +12,7 @@ export interface RegisteredUser {
   createdAt: string
   esEstudiante: boolean
   verificacionEstudiantePendiente: boolean
-  fechaVerificacion?: string // NUEVO
+  fechaVerificacion?: string
   documentosVerificacion?: {
     tipoVerificacion: "carnet" | "portal-edu" | "boletin"
     archivos: string[]
@@ -23,6 +23,14 @@ export interface RegisteredUser {
 }
 
 const STORAGE_KEY = "imperius_users_database"
+
+// Declaración global para TypeScript
+declare global {
+  interface Window {
+    UserStorage: typeof UserStorage;
+    debugUsers: () => void;
+  }
+}
 
 export class UserStorage {
   static clearDatabase(): void {
@@ -105,6 +113,8 @@ export class UserStorage {
 
     if (user) {
       console.log(`[v0] ✅ Login exitoso para: ${email}`)
+      console.log(`[v0] 🎓 Estado estudiante: ${user.esEstudiante}`)
+      console.log(`[v0] ⏳ Verificación pendiente: ${user.verificacionEstudiantePendiente}`)
     } else {
       console.log(`[v0] ❌ Login fallido para: ${email}`)
     }
@@ -188,48 +198,90 @@ export class UserStorage {
     return true;
   }
 
-  // ✅ NUEVO MÉTODO: Marcar verificación como pendiente
-  static marcarVerificacionPendiente(userId: string): void {
+  // ✅ MÉTODO CORREGIDO: Marcar verificación como pendiente
+  static marcarVerificacionPendiente(
+    userId: string, 
+    tipoVerificacion: "carnet" | "portal-edu" | "boletin",
+    archivos: string[] = []
+  ): void {
     const users = this.getUsers();
     const userIndex = users.findIndex((u) => u.id === userId);
 
     if (userIndex !== -1) {
       users[userIndex].verificacionEstudiantePendiente = true;
+      users[userIndex].documentosVerificacion = {
+        tipoVerificacion,
+        archivos,
+        fechaEnvio: new Date().toISOString()
+      };
       this.saveUsers(users);
       console.log(`[v0] ✅ Verificación marcada como pendiente para usuario: ${userId}`);
     }
   }
 
-  // ✅ NUEVO MÉTODO: Aprobar verificación de estudiante
+  // ✅ MÉTODO CORREGIDO: Aprobar verificación de estudiante
   static aprobarVerificacionEstudiante(userId: string): void {
     const users = this.getUsers();
     const userIndex = users.findIndex((u) => u.id === userId);
 
     if (userIndex === -1) {
-      throw new Error("Usuario no encontrado");
+      console.warn(`[v0] ⚠️ Usuario no encontrado: ${userId}`);
+      return;
     }
 
     users[userIndex].esEstudiante = true;
     users[userIndex].verificacionEstudiantePendiente = false;
-    
-    // Agregar fecha de verificación
     users[userIndex].fechaVerificacion = new Date().toISOString();
 
     this.saveUsers(users);
+    
+    // Actualizar también el usuario en sesión si está activo
+    const currentUser = localStorage.getItem("imperius_current_user");
+    if (currentUser) {
+      const userData = JSON.parse(currentUser);
+      if (userData.id === userId) {
+        userData.esEstudiante = true;
+        userData.verificacionEstudiantePendiente = false;
+        userData.fechaVerificacion = users[userIndex].fechaVerificacion;
+        localStorage.setItem("imperius_current_user", JSON.stringify(userData));
+      }
+    }
+
     console.log(`[v0] ✅ Usuario verificado como estudiante: ${userId}`);
+    
+    // Disparar evento personalizado para notificar a la aplicación
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('userVerificationUpdated', {
+        detail: { userId, approved: true }
+      }));
+    }
   }
 
-  // ✅ NUEVO MÉTODO: Rechazar verificación de estudiante
+  // ✅ MÉTODO CORREGIDO: Rechazar verificación de estudiante
   static rechazarVerificacionEstudiante(userId: string): void {
     const users = this.getUsers();
     const userIndex = users.findIndex((u) => u.id === userId);
 
     if (userIndex === -1) {
-      throw new Error("Usuario no encontrado");
+      console.warn(`[v0] ⚠️ Usuario no encontrado: ${userId}`);
+      return;
     }
 
     users[userIndex].verificacionEstudiantePendiente = false;
+    users[userIndex].documentosVerificacion = undefined;
+    
     this.saveUsers(users);
+
+    // Actualizar también el usuario en sesión si está activo
+    const currentUser = localStorage.getItem("imperius_current_user");
+    if (currentUser) {
+      const userData = JSON.parse(currentUser);
+      if (userData.id === userId) {
+        userData.verificacionEstudiantePendiente = false;
+        localStorage.setItem("imperius_current_user", JSON.stringify(userData));
+      }
+    }
+
     console.log(`[v0] ❌ Verificación rechazada para usuario: ${userId}`);
   }
 
@@ -243,17 +295,17 @@ export class UserStorage {
     tipoVerificacion: "carnet" | "portal-edu" | "boletin",
     archivos: string[],
   ): void {
-    // Solo mostrar en consola, NO modificar el estado del usuario
     console.log("[v0] ========================================")
-    console.log("[v0] SOLICITUD DE VERIFICACIÓN GUARDADA LOCALMENTE")
-    console.log("[v0] (No se envía a ningún lado por ahora)")
+    console.log("[v0] 📤 ENVIANDO SOLICITUD DE VERIFICACIÓN")
     console.log("[v0] ========================================")
     console.log("[v0] Usuario ID:", userId)
     console.log("[v0] Tipo de verificación:", tipoVerificacion)
-    console.log("[v0] Archivos:", archivos)
-    console.log("[v0] ")
-    console.log("[v0] Esta funcionalidad se implementará más adelante")
-    console.log("[v0] para enviar a: santiagis029@gmail.com")
+    console.log("[v0] Archivos:", archivos.length)
+    
+    // ✅ MARCAR COMO PENDIENTE INMEDIATAMENTE
+    this.marcarVerificacionPendiente(userId, tipoVerificacion, archivos);
+    
+    console.log("[v0] ✅ Estado actualizado: VERIFICACIÓN PENDIENTE")
     console.log("[v0] ========================================")
   }
 
@@ -263,18 +315,129 @@ export class UserStorage {
     return user?.esEstudiante || false
   }
 
-  // ✅ NUEVO MÉTODO: Verificar si un usuario tiene verificación pendiente
+  // ✅ MÉTODO CORREGIDO: Verificar si un usuario tiene verificación pendiente
   static tieneVerificacionPendiente(userId: string): boolean {
     const users = this.getUsers()
     const user = users.find((u) => u.id === userId)
     return user?.verificacionEstudiantePendiente || false
   }
 
-  // ✅ NUEVO MÉTODO: Obtener información completa del usuario
+  // ✅ MÉTODO CORREGIDO: Obtener información completa del usuario
   static getUsuarioCompleto(userId: string): RegisteredUser | null {
     const users = this.getUsers()
     return users.find((u) => u.id === userId) || null
   }
+
+  // ✅ MÉTODO NUEVO: Obtener usuario por ID
+  static getUserById(userId: string): RegisteredUser | null {
+    return this.getUsuarioCompleto(userId);
+  }
+
+  // ✅ MÉTODO NUEVO: Resetear solo verificaciones (mantener usuarios)
+  static resetearSoloVerificaciones(): void {
+    const users = this.getUsers();
+    
+    const usersActualizados = users.map(user => ({
+      ...user,
+      esEstudiante: false,
+      verificacionEstudiantePendiente: false,
+      fechaVerificacion: undefined,
+      documentosVerificacion: undefined
+    }));
+
+    this.saveUsers(usersActualizados);
+    
+    // Actualizar usuario en sesión si existe
+    const currentUser = localStorage.getItem("imperius_current_user");
+    if (currentUser) {
+      const userData = JSON.parse(currentUser);
+      userData.esEstudiante = false;
+      userData.verificacionEstudiantePendiente = false;
+      localStorage.setItem("imperius_current_user", JSON.stringify(userData));
+    }
+    
+    console.log("========================================")
+    console.log("🔄 VERIFICACIONES DE ESTUDIANTES RESETEADAS")
+    console.log("========================================")
+  }
+
+  // ✅ MÉTODO NUEVO: Ver estadísticas de la base de datos
+  static obtenerEstadisticas() {
+    const users = this.getUsers();
+    return {
+      totalUsuarios: users.length,
+      estudiantes: users.filter(u => u.esEstudiante).length,
+      verificacionesPendientes: users.filter(u => u.verificacionEstudiantePendiente).length,
+      usuariosRegulares: users.filter(u => !u.esEstudiante && !u.verificacionEstudiantePendiente).length
+    };
+  }
+
+  // ✅ MÉTODO NUEVO: Forzar actualización del estado del usuario
+  static forceRefreshUserState(userId: string): void {
+    const user = this.getUsuarioCompleto(userId);
+    if (user) {
+      const currentUser = localStorage.getItem("imperius_current_user");
+      if (currentUser) {
+        const userData = JSON.parse(currentUser);
+        userData.esEstudiante = user.esEstudiante;
+        userData.verificacionEstudiantePendiente = user.verificacionEstudiantePendiente;
+        localStorage.setItem("imperius_current_user", JSON.stringify(userData));
+        console.log("🔄 Estado del usuario actualizado forzadamente");
+      }
+    }
+  }
+
+  // ✅ MÉTODO NUEVO: Debugging rápido
+  static debug(): void {
+    if (typeof window === 'undefined') return;
+    
+    console.log("🔍 DEBUG - UserStorage");
+    console.log("========================");
+    
+    const users = this.getUsers();
+    const currentUser = localStorage.getItem("imperius_current_user");
+    
+    console.log(`📊 Total usuarios: ${users.length}`);
+    console.log(`🎓 Estudiantes: ${users.filter(u => u.esEstudiante).length}`);
+    console.log(`⏳ Pendientes: ${users.filter(u => u.verificacionEstudiantePendiente).length}`);
+    console.log(`👤 Usuario actual:`, currentUser ? JSON.parse(currentUser) : "No hay sesión");
+    console.log("========================");
+  }
 }
 
-// Ahora se debe llamar manualmente a UserStorage.clearDatabase() cuando sea necesario
+// ===========================================
+// DEBUGGING: Hacer UserStorage global para pruebas
+// ===========================================
+if (typeof window !== 'undefined') {
+  // @ts-ignore - Ignorar error de TypeScript para asignación global
+  window.UserStorage = UserStorage;
+  
+  // @ts-ignore - Ignorar error de TypeScript para asignación global
+  window.debugUsers = function() {
+    const users = JSON.parse(localStorage.getItem("imperius_users_database") || "[]");
+    const currentUser = JSON.parse(localStorage.getItem("imperius_current_user") || "null");
+    
+    console.log("🔍 DEBUG RÁPIDO - SISTEMA DE USUARIOS");
+    console.log("========================================");
+    console.log("📊 Total usuarios:", users.length);
+    console.log("🎓 Estudiantes verificados:", users.filter((u: any) => u.esEstudiante).length);
+    console.log("⏳ Verificaciones pendientes:", users.filter((u: any) => u.verificacionEstudiantePendiente).length);
+    console.log("👤 Usuario actual:", currentUser);
+    console.log("========================================");
+    
+    users.forEach((user: any, index: number) => {
+      console.log(`👤 Usuario ${index + 1}:`, {
+        id: user.id,
+        email: user.email,
+        nombre: `${user.name} ${user.lastName}`,
+        esEstudiante: user.esEstudiante,
+        verificacionPendiente: user.verificacionEstudiantePendiente,
+        fechaVerificacion: user.fechaVerificacion || 'No verificada'
+      });
+    });
+  };
+  
+  console.log("✅ UserStorage cargado correctamente");
+}
+
+export default UserStorage;

@@ -84,9 +84,11 @@ export function QuienesSomosSection() {
               <h3 className="font-bebas text-3xl text-secondary-foreground">NUESTRA MISIÓN</h3>
             </div>
             <p className="text-secondary-foreground/80 leading-relaxed text-lg">
-              Brindar a nuestra comunidad las herramientas, el conocimiento y la motivación necesarios 
-              para alcanzar sus objetivos de fitness, promoviendo un estilo de vida saludable y activo 
-              a través de programas personalizados y equipamiento de última generación.
+              En GYM IMPERIUS FITNESS transformamos la motivación en acción y los sueños
+              en resultados. Nuestra misión es acompañarte en el camino hacia tu mejor versión,
+              brindándote energía, apoyo y disciplina cada día. Aquí no solo entrenas el cuerpo:
+              fortaleces la mente, conquistas tus miedos y demuestras que nada es imposible
+              cuando crees en ti.
             </p>
           </div>
 
@@ -99,9 +101,12 @@ export function QuienesSomosSection() {
               <h3 className="font-bebas text-3xl text-secondary-foreground">NUESTRA VISIÓN</h3>
             </div>
             <p className="text-secondary-foreground/80 leading-relaxed text-lg">
-              Ser el gimnasio líder en la región, reconocido por nuestra excelencia en servicio, 
-              resultados comprobados y comunidad unida. Aspiramos a ser el destino preferido para 
-              quienes buscan transformar su vida a través del fitness.
+               A futuro, GYM IMPERIUS FITNESS se consolidará como una cadena de gimnasios
+               reconocida a nivel nacional e internacional por su excelencia en el servicio, su
+               compromiso con el desarrollo integral de las personas y su aporte a la formación de
+               una comunidad activa, saludable y disciplinada. Buscamos convertirnos en un
+               referente en el mundo del fitness, inspirando a más personas a vivir con constancia,
+               ética y pasión deportiva
             </p>
           </div>
         </div>
