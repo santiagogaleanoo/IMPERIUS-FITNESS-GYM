@@ -3,14 +3,13 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from "react"
 import { UserStorage } from "@/lib/almacenamiento-usuarios"
 
-// Interfaz que define la estructura de un usuario
+// Interfaz simplificada SIN verificación estudiante
 interface User {
   id: string
   name: string
   lastName: string
   email: string
-  esEstudiante: boolean
-  verificacionEstudiantePendiente: boolean
+  // ELIMINADO: propiedades de verificación estudiante
 }
 
 interface AuthContextType {
@@ -32,7 +31,7 @@ interface AuthContextType {
   setPendingAction: (action: (() => void) | null) => void
   refreshUser: () => Promise<void>
   forceRefreshUser: () => void
-  checkVerificationStatus: () => Promise<boolean>
+  // ELIMINADO: checkVerificationStatus
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -41,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
 
-  // ✅ MÉTODO MEJORADO: Forzar actualización inmediata del usuario
+  // ✅ MÉTODO SIMPLIFICADO: Forzar actualización inmediata del usuario
   const forceRefreshUser = () => {
     console.log("🔄 Forzando actualización completa del usuario...");
     const savedUser = localStorage.getItem("imperius_current_user");
@@ -57,8 +56,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: updatedUser.name,
           lastName: updatedUser.lastName,
           email: updatedUser.email,
-          esEstudiante: updatedUser.esEstudiante,
-          verificacionEstudiantePendiente: updatedUser.verificacionEstudiantePendiente,
         };
         
         // Solo actualizar si hay cambios
@@ -77,57 +74,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } else {
       console.log("ℹ️ No hay usuario en sesión para forzar actualización");
-    }
-  };
-
-  // ✅ NUEVA FUNCIÓN: Verificar estado de verificación específico
-  const checkVerificationStatus = async (): Promise<boolean> => {
-    console.log("🔍 Verificando estado de verificación específico...");
-    
-    const savedUser = localStorage.getItem("imperius_current_user");
-    if (!savedUser) {
-      console.log("ℹ️ No hay usuario en sesión");
-      return false;
-    }
-    
-    const userData = JSON.parse(savedUser);
-    
-    try {
-      // Buscar en la base de datos local
-      const dbUsers = JSON.parse(localStorage.getItem("imperius_users_database") || "[]");
-      const currentUserInDb = dbUsers.find((u: any) => u.id === userData.id);
-      
-      if (currentUserInDb) {
-        const hasChanged = 
-          currentUserInDb.esEstudiante !== userData.esEstudiante ||
-          currentUserInDb.verificacionEstudiantePendiente !== userData.verificacionEstudiantePendiente;
-        
-        if (hasChanged) {
-          console.log("🔄 Cambios detectados en verificación, actualizando sesión...");
-          
-          // Actualizar sesión
-          const updatedUser = {
-            ...userData,
-            esEstudiante: currentUserInDb.esEstudiante,
-            verificacionEstudiantePendiente: currentUserInDb.verificacionEstudiantePendiente
-          };
-          
-          setUser(updatedUser);
-          localStorage.setItem("imperius_current_user", JSON.stringify(updatedUser));
-          
-          // Disparar evento
-          window.dispatchEvent(new CustomEvent('userStateChanged', {
-            detail: updatedUser
-          }));
-          
-          return true;
-        }
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("❌ Error verificando estado:", error);
-      return false;
     }
   };
 
@@ -153,8 +99,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: localUser.name,
           lastName: localUser.lastName,
           email: localUser.email,
-          esEstudiante: localUser.esEstudiante,
-          verificacionEstudiantePendiente: localUser.verificacionEstudiantePendiente,
         }
 
         // Actualizar siempre para asegurar sincronización
@@ -163,8 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         console.log("✅ Usuario sincronizado desde localStorage:", {
           id: localUser.id,
-          esEstudiante: localUser.esEstudiante,
-          pendiente: localUser.verificacionEstudiantePendiente
+          nombre: `${localUser.name} ${localUser.lastName}`,
+          email: localUser.email
         });
       } else {
         console.warn("⚠️ Usuario no encontrado en localStorage, ID:", userData.id);
@@ -192,131 +136,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // ✅ SISTEMA MEJORADO DE SINCRONIZACIÓN EN TIEMPO REAL
+  // ✅ SISTEMA SIMPLIFICADO DE SINCRONIZACIÓN EN TIEMPO REAL
   useEffect(() => {
-    console.log("🔧 Configurando sistema de sincronización...");
+    console.log("🔧 Configurando sistema de sincronización básica...");
 
-    // 1. Intervalo de sincronización cada 5 segundos (solo si hay verificación pendiente)
-    const syncInterval = setInterval(() => {
-      if (user && user.verificacionEstudiantePendiente) {
-        console.log("⏳ Verificando automáticamente estado de verificación...")
-        refreshUser()
-      }
-    }, 5000) // cada 5 segundos
-
-    // 2. Escuchar mensajes de aprobación desde ventanas PHP
-    const handleMessage = (event: MessageEvent) => {
-      console.log("📨 Mensaje recibido:", event.data)
-      
-      if (event.data.type === "ESTUDIANTE_VERIFICADO" || event.data.type === "APPROVE_USER") {
-        const userId = event.data.userId
-        console.log("✅ Mensaje de aprobación recibido para usuario:", userId)
-        
-        // Verificar si es el usuario actual
-        const currentUser = localStorage.getItem("imperius_current_user")
-        if (currentUser) {
-          const userData = JSON.parse(currentUser)
-          if (userData.id === userId) {
-            console.log("🎯 Es el usuario actual, actualizando estado...")
-            
-            // Actualizar estado local inmediatamente
-            UserStorage.aprobarVerificacionEstudiante(userId)
-            
-            // Forzar actualización de la interfaz
-            setTimeout(() => {
-              forceRefreshUser()
-              refreshUser()
-            }, 500)
-            
-            // Mostrar notificación
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('showToast', {
-                detail: {
-                  title: "🎉 ¡Verificación aprobada!",
-                  description: "Ahora puedes acceder a los descuentos estudiantiles",
-                  type: "success"
-                }
-              }))
-            }
-          } else {
-            console.log("ℹ️ El mensaje no es para el usuario actual");
-          }
-        }
-      } else if (event.data.type === "ESTUDIANTE_RECHAZADO") {
-        const userId = event.data.userId
-        console.log("❌ Mensaje de rechazo recibido para usuario:", userId)
-        
-        const currentUser = localStorage.getItem("imperius_current_user")
-        if (currentUser) {
-          const userData = JSON.parse(currentUser)
-          if (userData.id === userId) {
-            console.log("🎯 Es el usuario actual, actualizando estado de rechazo...")
-            
-            // Actualizar estado local inmediatamente
-            UserStorage.rechazarVerificacionEstudiante(userId)
-            
-            // Forzar actualización de la interfaz
-            setTimeout(() => {
-              forceRefreshUser()
-              refreshUser()
-            }, 500)
-            
-            // Mostrar notificación
-            if (typeof window !== 'undefined') {
-              window.dispatchEvent(new CustomEvent('showToast', {
-                detail: {
-                  title: "❌ Verificación rechazada",
-                  description: "Tu solicitud de verificación estudiantil ha sido rechazada.",
-                  type: "error"
-                }
-              }))
-            }
-          }
-        }
-      }
-    }
-
-    // 3. BroadcastChannel para comunicación entre pestañas
-    let broadcastChannel: BroadcastChannel | null = null
-    if (typeof BroadcastChannel !== 'undefined') {
-      broadcastChannel = new BroadcastChannel('estudiante_verificacion')
-      broadcastChannel.onmessage = (event) => {
-        if (event.data.type === 'USUARIO_VERIFICADO') {
-          console.log("📡 Mensaje broadcast recibido:", event.data)
-          const userId = event.data.userId
-          
-          const currentUser = localStorage.getItem("imperius_current_user")
-          if (currentUser) {
-            const userData = JSON.parse(currentUser)
-            if (userData.id === userId) {
-              console.log("🔄 Actualizando desde broadcast channel...")
-              UserStorage.aprobarVerificacionEstudiante(userId)
-              setTimeout(() => {
-                forceRefreshUser()
-                refreshUser()
-              }, 500)
-            }
-          }
-        } else if (event.data.type === 'USUARIO_RECHAZADO') {
-          console.log("📡 Mensaje broadcast de rechazo recibido:", event.data)
-          const userId = event.data.userId
-          
-          const currentUser = localStorage.getItem("imperius_current_user")
-          if (currentUser) {
-            const userData = JSON.parse(currentUser)
-            if (userData.id === userId) {
-              UserStorage.rechazarVerificacionEstudiante(userId)
-              setTimeout(() => {
-                forceRefreshUser()
-                refreshUser()
-              }, 500)
-            }
-          }
-        }
-      }
-    }
-
-    // 4. Escuchar evento de cambio de almacenamiento (localStorage) - Sincronización entre pestañas
+    // 1. Escuchar evento de cambio de almacenamiento (localStorage) - Sincronización entre pestañas
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === "imperius_users_database" || event.key === "imperius_current_user") {
         console.log("💾 Cambio detectado en localStorage, actualizando...")
@@ -328,39 +152,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 5. Escuchar evento personalizado de cambio de usuario
+    // 2. Escuchar evento personalizado de cambio de usuario
     const handleUserStateChange = (event: CustomEvent) => {
       console.log("🔔 Evento de cambio de usuario recibido")
       setUser(event.detail)
     }
 
-    // 6. Escuchar eventos de actualización de verificación
-    const handleVerificationUpdate = (event: CustomEvent) => {
-      const { userId, approved } = event.detail;
-      if (user && user.id === userId) {
-        console.log("🔄 Actualización de verificación recibida:", approved);
-        forceRefreshUser();
-        refreshUser();
-      }
-    };
-
     // Registrar event listeners
-    window.addEventListener("message", handleMessage)
     window.addEventListener("storage", handleStorageChange)
     window.addEventListener('userStateChanged', handleUserStateChange as EventListener)
-    window.addEventListener('userVerificationUpdated', handleVerificationUpdate as EventListener)
 
     // Cleanup
     return () => {
       console.log("🧹 Limpiando listeners de sincronización...");
-      clearInterval(syncInterval)
-      window.removeEventListener("message", handleMessage)
       window.removeEventListener("storage", handleStorageChange)
       window.removeEventListener('userStateChanged', handleUserStateChange as EventListener)
-      window.removeEventListener('userVerificationUpdated', handleVerificationUpdate as EventListener)
-      if (broadcastChannel) {
-        broadcastChannel.close()
-      }
     }
   }, [user, forceRefreshUser, refreshUser])
 
@@ -376,8 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: validUser.name,
       lastName: validUser.lastName,
       email: validUser.email,
-      esEstudiante: validUser.esEstudiante,
-      verificacionEstudiantePendiente: validUser.verificacionEstudiantePendiente,
     }
 
     setUser(userSession)
@@ -415,8 +219,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: newUser.name,
       lastName: newUser.lastName,
       email: newUser.email,
-      esEstudiante: newUser.esEstudiante,
-      verificacionEstudiantePendiente: newUser.verificacionEstudiantePendiente,
     }
 
     setUser(userSession)
@@ -443,7 +245,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setPendingAction,
         refreshUser,
         forceRefreshUser,
-        checkVerificationStatus
+        // ELIMINADO: checkVerificationStatus
       }}
     >
       {children}

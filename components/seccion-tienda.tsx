@@ -1,3 +1,4 @@
+// components/seccion-tienda.tsx
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -8,6 +9,7 @@ import { useState, useEffect } from "react"
 import { ProductQuickView } from "./vista-rapida-producto"
 import { calcularCalificacionPromedio } from "@/lib/almacenamiento-resenas"
 import { CalificacionEstrellas } from "./calificacion-estrellas"
+import { OfferSystem, type ProductOffer } from "@/lib/sistema-ofertas"
 
 const products = [
   {
@@ -18,12 +20,17 @@ const products = [
     image: "/whey-protein-container-black-and-gold.jpg",
     description: "Proteína de suero de alta calidad con 25g de proteína por porción",
     type: "product" as const,
-    features: ["25g de proteína por porción", "Bajo en azúcar y grasa", "Fácil digestión", "Sabor chocolate premium"],
+    features: [
+      "25g de proteína por porción",
+      "Bajo en azúcar y grasa",
+      "Fácil digestión",
+      "Sabor chocolate premium",
+    ],
     bestseller: true,
   },
   {
     id: "product-2",
-    name: "Camiseta Imperius",
+    name: "Camiseta Imperious",
     category: "Ropa",
     price: 100000,
     image: "/black-athletic-t-shirt-with-gold-logo.jpg",
@@ -73,18 +80,30 @@ const products = [
     image: "/black-and-gold-gym-training-gloves.jpg",
     description: "Guantes profesionales con agarre superior y protección",
     type: "product" as const,
-    features: ["Agarre antideslizante", "Acolchado premium", "Muñequera ajustable", "Durabilidad garantizada"],
+    features: [
+      "Agarre antideslizante",
+      "Acolchado premium",
+      "Muñequera ajustable",
+      "Durabilidad garantizada",
+    ],
     bestseller: true,
   },
 ]
 
 export function ShopSection() {
-  const [selectedProduct, setSelectedProduct] = useState<(typeof products)[0] | null>(null)
+  const [selectedProduct, setSelectedProduct] =
+    useState<(typeof products)[0] | null>(null)
   const [showQuickView, setShowQuickView] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
-  const [calificaciones, setCalificaciones] = useState<{ [key: string]: { promedio: number; total: number } }>({})
+  const [calificaciones, setCalificaciones] = useState<{
+    [key: string]: { promedio: number; total: number }
+  }>({})
+  const [offersByProduct, setOffersByProduct] = useState<{
+    [productId: string]: ProductOffer
+  }>({})
 
+  // Carrusel automático
   useEffect(() => {
     if (!isAutoPlaying) return
 
@@ -95,13 +114,30 @@ export function ShopSection() {
     return () => clearInterval(interval)
   }, [isAutoPlaying])
 
+  // Cargar calificaciones
   useEffect(() => {
-    const nuevasCalificaciones: { [key: string]: { promedio: number; total: number } } = {}
+    const nuevasCalificaciones: {
+      [key: string]: { promedio: number; total: number }
+    } = {}
     products.forEach((product) => {
       const { promedio, total } = calcularCalificacionPromedio(product.id)
       nuevasCalificaciones[product.id] = { promedio, total }
     })
     setCalificaciones(nuevasCalificaciones)
+  }, [])
+
+  // 🔥 Cargar ofertas activas desde OfferSystem
+  useEffect(() => {
+    try {
+      const activeOffers = OfferSystem.getAllActiveOffers()
+      const map: { [productId: string]: ProductOffer } = {}
+      activeOffers.forEach((offer) => {
+        map[offer.productId] = offer
+      })
+      setOffersByProduct(map)
+    } catch (error) {
+      console.error("Error al cargar ofertas activas:", error)
+    }
   }, [])
 
   const handleProductClick = (product: (typeof products)[0]) => {
@@ -125,7 +161,7 @@ export function ShopSection() {
   }
 
   const getVisibleProducts = () => {
-    const visible = []
+    const visible: { product: (typeof products)[0]; offset: number }[] = []
     for (let i = -1; i <= 1; i++) {
       const index = (currentIndex + i + products.length) % products.length
       visible.push({ product: products[index], offset: i })
@@ -135,32 +171,53 @@ export function ShopSection() {
 
   return (
     <>
-      <section id="tienda" className="py-24 bg-gradient-to-b from-background to-secondary relative overflow-hidden">
+      <section
+        id="tienda"
+        className="py-24 bg-gradient-to-b from-background to-secondary relative overflow-hidden"
+      >
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl" />
           <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary rounded-full blur-3xl" />
         </div>
 
         <div className="container mx-auto px-4 relative z-10">
+          {/* Header */}
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-3 mb-4">
               <div className="h-1 w-12 bg-primary" />
-              <span className="text-primary font-semibold tracking-wider uppercase text-sm">Más Vendidos</span>
+              <span className="text-primary font-semibold tracking-wider uppercase text-sm">
+                Más Vendidos
+              </span>
               <div className="h-1 w-12 bg-primary" />
             </div>
             <h2 className="font-bebas text-5xl md:text-7xl text-foreground mb-4 tracking-tight">
               PRODUCTOS <span className="text-primary">DESTACADOS</span>
             </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Los favoritos de nuestra comunidad. Calidad premium para resultados extraordinarios.
+              Los favoritos de nuestra comunidad. Calidad premium para resultados
+              extraordinarios.
             </p>
           </div>
 
+          {/* Carrusel 3D */}
           <div className="relative max-w-7xl mx-auto mb-16">
             <div className="relative h-[500px] md:h-[600px] flex items-center justify-center perspective-1000">
               {getVisibleProducts().map(({ product, offset }) => {
-                const calificacion = calificaciones[product.id] || { promedio: 0, total: 0 }
+                const calificacion =
+                  calificaciones[product.id] || { promedio: 0, total: 0 }
                 const rating = calificacion.promedio
+
+                // ✅ Oferta activa para este producto (si existe)
+                const activeOffer = offersByProduct[product.id]
+                const displayPrice = activeOffer
+                  ? activeOffer.currentPrice
+                  : product.price
+                const originalPrice = activeOffer
+                  ? activeOffer.originalPrice
+                  : null
+                const discount = activeOffer
+                  ? activeOffer.discountPercentage
+                  : null
 
                 return (
                   <div
@@ -168,7 +225,7 @@ export function ShopSection() {
                     className="absolute transition-all duration-700 ease-out cursor-pointer"
                     style={{
                       transform: `
-                        translateX(${offset * 380}px) 
+                        translateX(${offset * 380}px)
                         translateZ(${offset === 0 ? 0 : -200}px)
                         scale(${offset === 0 ? 1 : 0.75})
                         rotateY(${offset * -15}deg)
@@ -204,22 +261,55 @@ export function ShopSection() {
                       </div>
 
                       <CardContent className="p-6">
-                        {/* Calificación - siempre mostrar estrellas */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <CalificacionEstrellas calificacion={rating} readonly tamano="sm" mostrarNumero />
-                          <span className="text-xs text-muted-foreground">
-                            ({calificacion.total > 0 ? `${calificacion.total} reseñas` : '0 reseñas'})
-                          </span>
-                        </div>
-                        <h3 className="font-bold text-2xl mb-2 text-card-foreground">{product.name}</h3>
-                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{product.description}</p>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-xs text-muted-foreground block">Precio</span>
-                            <span className="font-bebas text-4xl text-primary">
-                              ${product.price.toLocaleString("es-CO")}
+                        {/* Calificación */}
+                        {product.type === "product" && (
+                          <div className="flex items-center gap-2 mb-2">
+                            <CalificacionEstrellas
+                              calificacion={rating}
+                              readonly
+                              tamano="sm"
+                              mostrarNumero
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {calificacion.total > 0
+                                ? `(${calificacion.total} reseñas)`
+                                : "(0 reseñas)"}
                             </span>
                           </div>
+                        )}
+
+                        <h3 className="font-bold text-2xl mb-2 text-card-foreground">
+                          {product.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                          {product.description}
+                        </p>
+
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs text-muted-foreground block">
+                              Precio
+                            </span>
+                            {/* 💰 Precio con oferta (si hay) */}
+                            <span className="font-bebas text-4xl text-primary">
+                              ${displayPrice.toLocaleString("es-CO")}
+                            </span>
+                            {originalPrice &&
+                              originalPrice !== displayPrice && (
+                                <div className="flex items-center gap-2 mt-1">
+                                  <span className="text-xs text-muted-foreground line-through">
+                                    ${originalPrice.toLocaleString("es-CO")}
+                                  </span>
+                                  {typeof discount === "number" &&
+                                    discount > 0 && (
+                                      <span className="text-xs font-semibold text-green-500">
+                                        -{discount}%
+                                      </span>
+                                    )}
+                                </div>
+                              )}
+                          </div>
+
                           <Button
                             onClick={(e) => {
                               e.stopPropagation()
@@ -239,6 +329,7 @@ export function ShopSection() {
               })}
             </div>
 
+            {/* Flechas */}
             <button
               onClick={goToPrevious}
               className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-primary/90 hover:bg-primary text-primary-foreground p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
@@ -255,6 +346,7 @@ export function ShopSection() {
             </button>
           </div>
 
+          {/* Puntos del carrusel */}
           <div className="flex justify-center gap-3 mb-12">
             {products.map((_, index) => (
               <button
@@ -270,6 +362,7 @@ export function ShopSection() {
             ))}
           </div>
 
+          {/* Botón ver tienda completa */}
           <div className="text-center">
             <Link href="/tienda">
               <Button
@@ -284,7 +377,11 @@ export function ShopSection() {
         </div>
       </section>
 
-      <ProductQuickView product={selectedProduct} open={showQuickView} onOpenChange={setShowQuickView} />
+      <ProductQuickView
+        product={selectedProduct}
+        open={showQuickView}
+        onOpenChange={setShowQuickView}
+      />
     </>
   )
 }

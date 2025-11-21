@@ -26,7 +26,7 @@ export function QuienesSomosSection() {
             <div className="aspect-square rounded-2xl overflow-hidden">
               <img
                 src="/muscular-person-training-intensely-in-modern-gym-w.jpg"
-                alt="Imperius Fitness Gym Team"
+                alt="IMPERIOUS Fitness Gym Team"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -41,10 +41,10 @@ export function QuienesSomosSection() {
           {/* Contenido */}
           <div className="space-y-6">
             <h3 className="font-bebas text-4xl text-secondary-foreground">
-              IMPERIUS <span className="text-primary">FITNESS GYM</span>
+              IMPERIOUS <span className="text-primary">FITNESS GYM</span>
             </h3>
             <p className="text-lg text-secondary-foreground/80 leading-relaxed">
-              En Imperius Fitness Gym, nos dedicamos a proporcionar un ambiente de entrenamiento excepcional 
+              En IMPERIOUS Fitness Gym, nos dedicamos a proporcionar un ambiente de entrenamiento excepcional 
               donde cada miembro puede alcanzar sus metas físicas y mejorar su calidad de vida. Nuestro equipo 
               de profesionales certificados está comprometido con tu éxito.
             </p>
@@ -84,7 +84,7 @@ export function QuienesSomosSection() {
               <h3 className="font-bebas text-3xl text-secondary-foreground">NUESTRA MISIÓN</h3>
             </div>
             <p className="text-secondary-foreground/80 leading-relaxed text-lg">
-              En GYM IMPERIUS FITNESS transformamos la motivación en acción y los sueños
+              En GYM IMPERIOUS FITNESS transformamos la motivación en acción y los sueños
               en resultados. Nuestra misión es acompañarte en el camino hacia tu mejor versión,
               brindándote energía, apoyo y disciplina cada día. Aquí no solo entrenas el cuerpo:
               fortaleces la mente, conquistas tus miedos y demuestras que nada es imposible
@@ -101,7 +101,7 @@ export function QuienesSomosSection() {
               <h3 className="font-bebas text-3xl text-secondary-foreground">NUESTRA VISIÓN</h3>
             </div>
             <p className="text-secondary-foreground/80 leading-relaxed text-lg">
-               A futuro, GYM IMPERIUS FITNESS se consolidará como una cadena de gimnasios
+               A futuro, GYM IMPERIOUS FITNESS se consolidará como una cadena de gimnasios
                reconocida a nivel nacional e internacional por su excelencia en el servicio, su
                compromiso con el desarrollo integral de las personas y su aporte a la formación de
                una comunidad activa, saludable y disciplinada. Buscamos convertirnos en un

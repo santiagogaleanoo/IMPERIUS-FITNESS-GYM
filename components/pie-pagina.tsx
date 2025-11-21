@@ -37,7 +37,7 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
           
           <div className="prose prose-lg max-w-none">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Políticas y Términos - Gym Imperius Fitness</h1>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Políticas y Términos - Gym Imperious Fitness</h1>
               <p className="text-lg text-gray-600">POLÍTICAS DE PRIVACIDAD, TÉRMINOS Y CONDICIONES</p>
               <p className="text-gray-500">Versión 1.0</p>
             </div>
@@ -47,7 +47,7 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">Introducción</h3>
                 <p className="text-gray-700">
                   Este documento establece los Términos y Condiciones de uso, así como las Políticas de Privacidad de
-                  Gym Imperius Fitness, empresa identificada con NIT 01904960653, ubicada en Armenia, Quindío.
+                  Gym Imperious Fitness, empresa identificada con NIT 01904960653, ubicada en Armenia, Quindío.
                   Estos términos aplican tanto para el uso presencial de las instalaciones del gimnasio como para el uso
                   de plataformas digitales, incluyendo la página web y redes sociales asociadas.
                 </p>
@@ -57,7 +57,7 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">1. OBJETO</h3>
                 <p className="text-gray-700">
                   El presente documento tiene como objetivo regular las condiciones bajo las cuales los usuarios pueden
-                  acceder y utilizar los servicios de Gym Imperius Fitness, ya sea de manera presencial o a través de
+                  acceder y utilizar los servicios de Gym Imperious Fitness, ya sea de manera presencial o a través de
                   medios digitales administrados por terceros autorizados.
                 </p>
               </section>
@@ -65,7 +65,7 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
               <section>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">2. ADMINISTRACIÓN DE LA PÁGINA WEB</h3>
                 <p className="text-gray-700">
-                  La página web será administrada por un tercero designado por Gym Imperius Fitness. Sin embargo,
+                  La página web será administrada por un tercero designado por Gym Imperious Fitness. Sin embargo,
                   cualquier movimiento, acción o decisión que se realice en nombre de la empresa deberá contar con la
                   autorización expresa y por escrito de los representantes legales: Hernán Darío Trejos Zapata (CC
                   1094957735) o Diego David Crisanto Díaz Misas (CC 1094960653). Cualquier acción no autorizada
@@ -78,14 +78,14 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                 <p className="text-gray-700">
                   El usuario se compromete a utilizar los servicios de forma responsable y conforme a la ley. Está
                   prohibido el uso indebido de la marca, el logotipo, contenidos, imágenes o cualquier material
-                  perteneciente a Gym Imperius Fitness sin autorización expresa.
+                  perteneciente a Gym Imperious Fitness sin autorización expresa.
                 </p>
               </section>
 
               <section>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">4. PROTECCIÓN DE DATOS PERSONALES</h3>
                 <p className="text-gray-700">
-                  Gym Imperius Fitness garantiza la confidencialidad, seguridad y adecuado manejo de los datos
+                  Gym Imperious Fitness garantiza la confidencialidad, seguridad y adecuado manejo de los datos
                   personales conforme a la Ley 1581 de 2012. Los datos recolectados serán utilizados únicamente para
                   fines administrativos, comerciales o informativos relacionados con la empresa.
                 </p>
@@ -103,7 +103,7 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
               <section>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">6. PROPIEDAD INTELECTUAL</h3>
                 <p className="text-gray-700">
-                  Todo el contenido visual, textual y gráfico de Gym Imperius Fitness, incluyendo logotipos, marcas,
+                  Todo el contenido visual, textual y gráfico de Gym Imperious Fitness, incluyendo logotipos, marcas,
                   fotografías, textos y diseños, es propiedad exclusiva de la empresa. Queda prohibida su reproducción,
                   copia o distribución sin autorización.
                 </p>
@@ -112,7 +112,7 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
               <section>
                 <h3 className="text-xl font-semibold text-gray-900 mb-3">7. DISPOSICIONES FINALES</h3>
                 <p className="text-gray-700">
-                  Estos términos entran en vigencia a partir de su publicación. Gym Imperius Fitness se reserva el
+                  Estos términos entran en vigencia a partir de su publicación. Gym Imperious Fitness se reserva el
                   derecho de actualizar la presente versión (1.0) cuando se considere necesario. El uso continuo de los
                   servicios implica la aceptación de las modificaciones realizadas.
                 </p>
@@ -120,7 +120,7 @@ function TermsModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
               <div className="border-t pt-6 mt-6">
                 <p className="text-center text-gray-600">
-                  <strong>Gym Imperius Fitness © 2025</strong><br />
+                  <strong>Gym Imperious Fitness © 2025</strong><br />
                   NIT: 01904960653<br />
                   Armenia, Quindío - Colombia
                 </p>
@@ -158,7 +158,7 @@ function MissionModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                 <h3 className="text-2xl font-bold text-gray-800">MISIÓN</h3>
               </div>
               <p className="text-lg text-gray-700 leading-relaxed">
-                En <span className="font-semibold text-blue-600">GYM IMPERIUS FITNESS</span> transformamos la motivación en acción y los sueños
+                En <span className="font-semibold text-blue-600">GYM IMPERIOUS FITNESS</span> transformamos la motivación en acción y los sueños
                 en resultados. Nuestra misión es acompañarte en el camino hacia tu mejor versión,
                 brindándote energía, apoyo y disciplina cada día. Aquí no solo entrenas el cuerpo:
                 fortaleces la mente, conquistas tus miedos y demuestras que nada es imposible
@@ -173,7 +173,7 @@ function MissionModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => voi
                 <h3 className="text-2xl font-bold text-gray-800">VISIÓN</h3>
               </div>
               <p className="text-lg text-gray-700 leading-relaxed">
-                A futuro, <span className="font-semibold text-purple-600">GYM IMPERIUS FITNESS</span> se consolidará como una cadena de gimnasios
+                A futuro, <span className="font-semibold text-purple-600">GYM IMPERIOUS FITNESS</span> se consolidará como una cadena de gimnasios
                 reconocida a nivel nacional e internacional por su excelencia en el servicio, su
                 compromiso con el desarrollo integral de las personas y su aporte a la formación de
                 una comunidad activa, saludable y disciplinada. Buscamos convertirnos en un
@@ -206,7 +206,7 @@ export function Footer() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
             {/* Brand */}
             <div>
-              <div className="font-bebas text-4xl text-primary mb-4 tracking-wider">IMPERIUS FITNESS GYM</div>
+              <div className="font-bebas text-4xl text-primary mb-4 tracking-wider">GYM IMPERIOUS FITNESS</div>
               <p className="text-secondary-foreground/70 mb-6 leading-relaxed">
                 Transforma tu cuerpo y mente. Síguenos en redes y únete al mejor gimnasio de la ciudad.
               </p>
@@ -328,7 +328,7 @@ export function Footer() {
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               {/* Copyright a la izquierda */}
               <p className="text-secondary-foreground/70 text-sm">
-                © 2025 Imperius Fitness Gym. Todos los derechos reservados.
+                © 2025  GYM IMPERIOUS FITNESS. Todos los derechos reservados.
               </p>
               {/* Enlaces legales a la derecha */}
               <div className="flex gap-6 text-sm">

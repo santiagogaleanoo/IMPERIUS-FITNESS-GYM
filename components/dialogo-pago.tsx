@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
@@ -12,26 +11,43 @@ import { Separator } from "@/components/ui/separator"
 import { CreditCard, Truck, CheckCircle2 } from "lucide-react"
 import { useCart } from "@/contexts/contexto-carrito"
 
+interface CheckoutItem {
+  id: string
+  name: string
+  price: number
+  quantity: number
+  image?: string
+  type: "product" | "membership"
+}
+
 interface CheckoutDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  items?: CheckoutItem[] // Nueva prop opcional
+  onSuccess?: () => void // Nueva prop para callback de éxito
 }
 
-export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
-  const { items, total, clearCart } = useCart()
+export function CheckoutDialog({ open, onOpenChange, items: externalItems, onSuccess }: CheckoutDialogProps) {
+  const { items: cartItems, total, clearCart } = useCart()
+  
+  // Usar items externos si se proporcionan, de lo contrario usar items del carrito
+  const items = externalItems || cartItems
+  const calculatedTotal = externalItems 
+    ? externalItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+    : total
+
   const [paymentMethod, setPaymentMethod] = useState("contra-entrega")
   const [orderComplete, setOrderComplete] = useState(false)
 
   // Calcular envío (solo para productos físicos)
   const hasPhysicalProducts = items.some((item) => item.type === "product")
-  const shipping = hasPhysicalProducts && total > 0 && total < 200000 ? 15000 : 0
-  const finalTotal = total + shipping
+  const shipping = hasPhysicalProducts && calculatedTotal > 0 && calculatedTotal < 200000 ? 15000 : 0
+  const finalTotal = calculatedTotal + shipping
 
   // Función para procesar el pago
   const handleCheckout = (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Aquí se conectará con el sistema de pagos real
     console.log("[v0] Procesando pago con método:", paymentMethod)
     console.log("[v0] Total a pagar:", finalTotal)
     console.log("[v0] Productos:", items)
@@ -39,11 +55,17 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
     // Simular procesamiento exitoso
     setOrderComplete(true)
 
-    // Limpiar carrito después de 2 segundos
+    // Limpiar carrito después de 2 segundos (solo si no son items externos)
     setTimeout(() => {
-      clearCart()
+      if (!externalItems) {
+        clearCart()
+      }
       setOrderComplete(false)
       onOpenChange(false)
+      // Ejecutar callback de éxito si existe
+      if (onSuccess) {
+        onSuccess()
+      }
     }, 3000)
   }
 
@@ -155,7 +177,7 @@ export function CheckoutDialog({ open, onOpenChange }: CheckoutDialogProps) {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Subtotal ({items.length} artículos):</span>
-                <span className="font-semibold">${total.toLocaleString("es-CO")}</span>
+                <span className="font-semibold">${calculatedTotal.toLocaleString("es-CO")}</span>
               </div>
               {hasPhysicalProducts && (
                 <div className="flex justify-between">

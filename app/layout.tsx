@@ -20,7 +20,7 @@ const bebasNeue = Bebas_Neue({
 
 // Metadatos de la página para SEO
 export const metadata: Metadata = {
-  title: "Imperius Fitness Gym - Transforma Tu Cuerpo",
+  title: "Gym Imperious Fitness - Transforma Tu Cuerpo",
   description:
     "Imperius Fitness Gym: El mejor gimnasio con equipamiento de última generación, entrenadores profesionales y tienda de suplementos y ropa deportiva.",
   generator: "v0.app",

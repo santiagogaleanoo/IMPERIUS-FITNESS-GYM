@@ -9,7 +9,9 @@ import { Footer } from "@/components/pie-pagina"
 import { ProductQuickView } from "@/components/vista-rapida-producto"
 import { CalificacionEstrellas } from "@/components/calificacion-estrellas"
 import { calcularCalificacionPromedio } from "@/lib/almacenamiento-resenas"
+import { OfferSystem, type ProductOffer } from "@/lib/sistema-ofertas"
 
+// 🔥 LISTA ORIGINAL DE PRODUCTOS
 const allProducts = [
   {
     id: "product-1",
@@ -163,47 +165,42 @@ const allProducts = [
   },
 ]
 
-/**
- * Página de la tienda completa
- * Muestra todos los productos disponibles con filtros por categoría
- *
- * Características:
- * - Filtrado por categorías (Todos, Suplementos, Ropa, Accesorios)
- * - Grid responsive de productos
- * - Vista rápida del producto al hacer clic
- * - Precios en pesos colombianos (COP)
- */
 export default function TiendaPage() {
-  // Estado para la categoría seleccionada en el filtro
   const [selectedCategory, setSelectedCategory] = useState("Todos")
-
-  // Estado para el producto seleccionado en la vista rápida
-  const [selectedProduct, setSelectedProduct] = useState<(typeof allProducts)[0] | null>(null)
-
-  // Calificaciones calculadas por producto
+  const [selectedProduct, setSelectedProduct] =
+    useState<(typeof allProducts)[0] | null>(null)
   const [calificaciones, setCalificaciones] = useState<{ [key: string]: { promedio: number; total: number } }>({})
+  const [showQuickView, setShowQuickView] = useState(false)
+
+  // 🔥 OFERTAS ACTIVAS
+  const [offersByProduct, setOffersByProduct] = useState<{ [productId: string]: ProductOffer }>({})
 
   useEffect(() => {
-    const nuevas: { [key: string]: { promedio: number; total: number } } = {}
+    // Calificaciones
+    const nuevas: any = {}
     allProducts.forEach((p) => {
       const { promedio, total } = calcularCalificacionPromedio(p.id)
       nuevas[p.id] = { promedio, total }
     })
     setCalificaciones(nuevas)
+
+    // Ofertas activas
+    const activeOffers = OfferSystem.getAllActiveOffers()
+    const map: any = {}
+    activeOffers.forEach((offer) => {
+      map[offer.productId] = offer
+    })
+    setOffersByProduct(map)
   }, [])
 
-  // Estado para mostrar/ocultar el modal de vista rápida
-  const [showQuickView, setShowQuickView] = useState(false)
-
-  // Categorías disponibles para filtrar
   const categories = ["Todos", "Suplementos", "Ropa", "Accesorios"]
 
-  // Filtrar productos según la categoría seleccionada
   const filteredProducts =
-    selectedCategory === "Todos" ? allProducts : allProducts.filter((p) => p.category === selectedCategory)
+    selectedCategory === "Todos"
+      ? allProducts
+      : allProducts.filter((p) => p.category === selectedCategory)
 
-  // Función para abrir la vista rápida de un producto
-  const handleProductClick = (product: (typeof allProducts)[0]) => {
+  const handleProductClick = (product: any) => {
     setSelectedProduct(product)
     setShowQuickView(true)
   }
@@ -211,22 +208,21 @@ export default function TiendaPage() {
   return (
     <>
       <div className="min-h-screen bg-background">
-        {/* Encabezado de navegación */}
         <Header />
 
         <main className="pt-32 pb-24">
           <div className="container mx-auto px-4">
-            {/* Título de la página */}
+
             <div className="text-center mb-12">
               <h1 className="font-bebas text-6xl md:text-8xl text-foreground mb-4 tracking-tight">
-                TIENDA <span className="text-primary">IMPERIUS</span>
+                TIENDA <span className="text-primary">IMPERIOUS</span>
               </h1>
               <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
                 Todo lo que necesitas para alcanzar tus objetivos
               </p>
             </div>
 
-            {/* Filtros de categoría */}
+            {/* FILTROS */}
             <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Filter className="h-5 w-5" />
@@ -248,77 +244,98 @@ export default function TiendaPage() {
               ))}
             </div>
 
-            {/* Grid de productos */}
+            {/* GRID DE PRODUCTOS */}
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredProducts.map((product) => (
-                <Card
-                  key={product.id}
-                  className="group overflow-hidden border-border hover:border-primary transition-all duration-300 cursor-pointer"
-                  onClick={() => handleProductClick(product)}
-                >
-                  {/* Imagen del producto */}
-                  <div className="relative overflow-hidden bg-muted aspect-square">
-                    <img
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    {/* Badge de categoría */}
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-bold">
-                        {product.category}
-                      </span>
-                    </div>
-                  </div>
+              {filteredProducts.map((product) => {
+                const offer = offersByProduct[product.id]
+                const displayPrice = offer ? offer.currentPrice : product.price
+                const originalPrice = offer ? offer.originalPrice : null
+                const discount = offer ? offer.discountPercentage : null
 
-                  {/* Información del producto */}
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-xl mb-2 text-card-foreground">{product.name}</h3>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-bebas text-3xl text-primary">${product.price.toLocaleString("es-CO")}</span>
-                    </div>
-                    {/* Calificación - siempre mostrar estrellas */}
-                    {(() => {
-                      const c = calificaciones[product.id]
-                      const rating = c?.promedio || 0
-                      const total = c?.total || 0
-                      
-                      return (
-                        <div className="flex items-center gap-2">
-                          <CalificacionEstrellas calificacion={rating} readonly tamano="sm" mostrarNumero />
-                          <span className="text-xs text-muted-foreground">
-                            ({total > 0 ? `${total} reseñas` : '0 reseñas'})
-                          </span>
+                const c = calificaciones[product.id]
+                const rating = c?.promedio || 0
+                const total = c?.total || 0
+
+                return (
+                  <Card
+                    key={product.id}
+                    className="group overflow-hidden border-border hover:border-primary transition-all duration-300 cursor-pointer"
+                    onClick={() => handleProductClick(product)}
+                  >
+                    <div className="relative overflow-hidden bg-muted aspect-square">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                      <div className="absolute top-4 left-4">
+                        <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-xs font-bold">
+                          {product.category}
+                        </span>
+                      </div>
+
+                      {offer && (
+                        <div className="absolute top-4 right-4 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+                          -{discount}%
                         </div>
-                      )
-                    })()}
-                  </CardContent>
+                      )}
+                    </div>
 
-                  {/* Botón de acción */}
-                  <CardFooter className="p-6 pt-0">
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleProductClick(product)
-                      }}
-                      className="w-full bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground font-semibold"
-                    >
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      Ver Detalles
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
+                    <CardContent className="p-6">
+                      <h3 className="font-bold text-xl mb-2">{product.name}</h3>
+
+                      <div className="flex flex-col mb-2">
+                        {originalPrice && (
+                          <span className="text-sm line-through text-muted-foreground">
+                            ${originalPrice.toLocaleString("es-CO")}
+                          </span>
+                        )}
+
+                        <span className="font-bebas text-3xl text-primary">
+                          ${displayPrice.toLocaleString("es-CO")}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <CalificacionEstrellas
+                          calificacion={rating}
+                          readonly
+                          tamano="sm"
+                          mostrarNumero
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          ({total} reseñas)
+                        </span>
+                      </div>
+                    </CardContent>
+
+                    <CardFooter className="p-6 pt-0">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleProductClick(product)
+                        }}
+                        className="w-full bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground"
+                      >
+                        <ShoppingCart className="mr-2 h-4 w-4" />
+                        Ver Detalles
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                )
+              })}
             </div>
           </div>
         </main>
 
-        {/* Pie de página */}
         <Footer />
       </div>
 
-      {/* Modal de vista rápida del producto */}
-      <ProductQuickView product={selectedProduct} open={showQuickView} onOpenChange={setShowQuickView} />
+      <ProductQuickView
+        product={selectedProduct}
+        open={showQuickView}
+        onOpenChange={setShowQuickView}
+      />
     </>
   )
 }

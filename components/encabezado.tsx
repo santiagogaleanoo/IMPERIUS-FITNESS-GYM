@@ -1,3 +1,4 @@
+// components/encabezado.tsx
 "use client"
 
 import { useState, useEffect, useRef } from "react"
@@ -7,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Menu, X, User, LogOut, ChevronDown } from "lucide-react"
 import Image from "next/image"
 import { CartDrawer } from "@/components/carrito-compras"
+// ✔ ruta relativa porque está en la misma carpeta
+import { WishlistDrawer } from "./lista-deseos"
 import { useAuth } from "@/contexts/contexto-autenticacion"
 import { AuthDialog } from "@/components/dialogo-autenticacion"
 import {
@@ -31,7 +34,6 @@ export function Header() {
   const pathname = usePathname()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Cerrar menú desplegable al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -42,14 +44,12 @@ export function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // Confirmación de cierre de sesión
   const handleLogoutClick = () => setShowLogoutConfirm(true)
   const confirmLogout = () => {
     logout()
     setShowLogoutConfirm(false)
   }
 
-  // Navegación a secciones del home
   const navigateToSection = (sectionId: string) => {
     setIsMenuOpen(false)
     setIsApartadosDropdownOpen(false)
@@ -80,7 +80,9 @@ export function Header() {
                 height={50}
                 className="object-contain"
               />
-              <div className="text-2xl font-bebas text-primary tracking-wider">IMPERIUS FITNESS GYM</div>
+              <div className="text-2xl font-bebas text-primary tracking-wider">
+                GYM IMPERIOUS FITNESS
+              </div>
             </Link>
 
             {/* Navegación Desktop */}
@@ -93,7 +95,9 @@ export function Header() {
                 >
                   Apartados
                   <ChevronDown
-                    className={`h-4 w-4 transition-transform ${isApartadosDropdownOpen ? "rotate-180" : ""}`}
+                    className={`h-4 w-4 transition-transform ${
+                      isApartadosDropdownOpen ? "rotate-180" : ""
+                    }`}
                   />
                 </button>
 
@@ -155,6 +159,7 @@ export function Header() {
 
             {/* Botones de acción */}
             <div className="hidden md:flex items-center gap-2 flex-shrink-0">
+              <WishlistDrawer />
               <CartDrawer />
               {isAuthenticated ? (
                 <div className="flex items-center gap-2">
@@ -210,7 +215,9 @@ export function Header() {
             <div className="md:hidden py-3 border-t border-primary/20">
               <nav className="flex flex-col gap-4">
                 <div className="border-b border-primary/20 pb-2">
-                  <div className="text-secondary-foreground font-medium mb-2">Apartados</div>
+                  <div className="text-secondary-foreground font-medium mb-2">
+                    Apartados
+                  </div>
                   <div className="flex flex-col gap-2 ml-4">
                     <button
                       onClick={() => navigateToSection("inicio")}
@@ -314,21 +321,27 @@ export function Header() {
         </div>
       </header>
 
-      {/* Diálogo de autenticación */}
-      <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} defaultTab={authMode} />
+      <AuthDialog
+        open={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        defaultTab={authMode}
+      />
 
-      {/* Confirmación de cierre de sesión */}
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
             <AlertDialogDescription>
-              ¿Estás seguro de que deseas cerrar sesión? Tu carrito se guardará para cuando vuelvas.
+              ¿Estás seguro de que deseas cerrar sesión? Tu carrito se guardará
+              para cuando vuelvas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmLogout} className="bg-primary hover:bg-primary/90">
+            <AlertDialogAction
+              onClick={confirmLogout}
+              className="bg-primary hover:bg-primary/90"
+            >
               Sí, cerrar sesión
             </AlertDialogAction>
           </AlertDialogFooter>
