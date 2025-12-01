@@ -48,7 +48,7 @@ export class OfferSystem {
     }
 
     this.saveOffers(offers)
-    this.notifyUsersAboutOffer(newOffer)
+    this.notifyUsersAboutOffer(newOffer) // actualiza wishlist, carrito y manda correo
   }
 
   // -------------------------------
@@ -91,6 +91,8 @@ export class OfferSystem {
   // -------------------------------
   static updateOffersStatus(): void {
     const offers = this.getAllOffers()
+    if (!offers.length) return
+
     const now = new Date()
     let updated = false
 
@@ -104,7 +106,12 @@ export class OfferSystem {
       return { ...offer, isActive: isNowActive }
     })
 
-    if (updated) this.saveOffers(updatedOffers)
+    if (updated) {
+      this.saveOffers(updatedOffers)
+      // ⏱ cuando cambian estados (activan/caducan),
+      // recalculamos wishlist y carrito de todos los usuarios
+      this.syncAllUserDiscounts()
+    }
   }
 
   // -------------------------------
@@ -118,12 +125,18 @@ export class OfferSystem {
     const end = new Date(offer.endDate)
     if (start > now || end < now) return
 
-    const users = JSON.parse(localStorage.getItem("imperius_users_database") || "[]")
+    const users = JSON.parse(
+      localStorage.getItem("imperius_users_database") || "[]",
+    )
 
     users.forEach((user: any) => {
       if (user?.id) {
+        // Notificación interna (campanita)
         this.addUserNotification(user.id, offer)
+        // Actualizar lista de deseos + mandar correo
         this.updateWishlistItemDiscount(user.id, user.email, offer)
+        // 💳 Actualizar precios en el carrito (sin correo)
+        this.updateCartItemDiscount(user.id, offer)
       }
     })
   }
@@ -148,7 +161,7 @@ export class OfferSystem {
   }
 
   // -------------------------------
-  // 📍 ACTUALIZAR LISTA DE DESEOS
+  // 📍 ACTUALIZAR LISTA DE DESEOS (al CREAR oferta)
   // -------------------------------
   private static updateWishlistItemDiscount(
     userId: string,
@@ -187,9 +200,9 @@ export class OfferSystem {
 
     if (!updated) return
 
-    // 📩 INVOCACIÓN AL BACKEND (OPCIONAL)
+    // 📩 Email SOLO para los que lo tienen en wishlist
     if (userEmail) {
-      fetch("http://localhost/php/send-mail.php", {
+      fetch("http://localhost/php/send-offer.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -201,6 +214,152 @@ export class OfferSystem {
           discountPercentage: offer.discountPercentage,
         }),
       }).catch(() => {})
+    }
+  }
+
+  // -------------------------------
+  // 💳 ACTUALIZAR PRECIOS EN CARRITO (al CREAR oferta)
+  // -------------------------------
+  private static updateCartItemDiscount(
+    userId: string,
+    offer: ProductOffer,
+  ): void {
+    if (typeof window === "undefined") return
+
+    const cartKey = `imperius_cart_${userId}`
+    const cart = JSON.parse(localStorage.getItem(cartKey) || "[]")
+
+    let changed = false
+
+    const updatedCart = cart.map((item: any) => {
+      if (item.id === offer.productId) {
+        changed = true
+        const originalPrice = item.originalPrice ?? item.price
+        return {
+          ...item,
+          originalPrice,
+          price: offer.currentPrice,
+        }
+      }
+      return item
+    })
+
+    if (changed) {
+      localStorage.setItem(cartKey, JSON.stringify(updatedCart))
+    }
+  }
+
+  // -------------------------------
+  // 🔁 SINCRONIZAR DESCUENTOS PARA TODOS LOS USUARIOS
+  // (se usa cuando caducan / se eliminan ofertas)
+  // -------------------------------
+  private static syncAllUserDiscounts(): void {
+    if (typeof window === "undefined") return
+
+    const users = JSON.parse(
+      localStorage.getItem("imperius_users_database") || "[]",
+    )
+
+    const offers = this.getAllOffers()
+    const now = new Date()
+    const activeMap: Record<string, ProductOffer> = {}
+
+    // mapa de ofertas activas por productId
+    offers.forEach(offer => {
+      const start = new Date(offer.startDate)
+      const end = new Date(offer.endDate)
+      if (start <= now && end >= now) {
+        activeMap[offer.productId] = { ...offer, isActive: true }
+      }
+    })
+
+    users.forEach((user: any) => {
+      if (!user?.id) return
+      this.syncWishlistForUser(user.id, activeMap)
+      this.syncCartForUser(user.id, activeMap)
+    })
+  }
+
+  // ✅ Sincroniza wishlist de UN usuario con las ofertas activas
+  private static syncWishlistForUser(
+    userId: string,
+    activeOffers: Record<string, ProductOffer>,
+  ): void {
+    const key = `imperius_wishlist_${userId}`
+    const wishlist = JSON.parse(localStorage.getItem(key) || "[]")
+
+    let changed = false
+
+    const updated = wishlist.map((item: any) => {
+      const offer = activeOffers[item.id]
+
+      if (offer) {
+        // Tiene oferta activa
+        const originalPrice = item.originalPrice ?? item.price
+        changed = true
+        return {
+          ...item,
+          hasDiscount: true,
+          originalPrice,
+          price: offer.currentPrice,
+          discountPercentage: offer.discountPercentage,
+        }
+      } else if (item.hasDiscount && item.originalPrice) {
+        // Ya NO tiene oferta -> revertimos al precio original
+        changed = true
+        const restoredPrice = item.originalPrice
+        const { hasDiscount, discountPercentage, ...rest } = item
+        return {
+          ...rest,
+          price: restoredPrice,
+          originalPrice: restoredPrice,
+        }
+      }
+
+      return item
+    })
+
+    if (changed) {
+      localStorage.setItem(key, JSON.stringify(updated))
+    }
+  }
+
+  // ✅ Sincroniza carrito de UN usuario con las ofertas activas
+  private static syncCartForUser(
+    userId: string,
+    activeOffers: Record<string, ProductOffer>,
+  ): void {
+    const key = `imperius_cart_${userId}`
+    const cart = JSON.parse(localStorage.getItem(key) || "[]")
+
+    let changed = false
+
+    const updated = cart.map((item: any) => {
+      const offer = activeOffers[item.id]
+
+      if (offer) {
+        // Oferta activa
+        const originalPrice = item.originalPrice ?? item.price
+        changed = true
+        return {
+          ...item,
+          originalPrice,
+          price: offer.currentPrice,
+        }
+      } else if (item.originalPrice && item.price !== item.originalPrice) {
+        // Ya no tiene oferta, volvemos al original
+        changed = true
+        return {
+          ...item,
+          price: item.originalPrice,
+        }
+      }
+
+      return item
+    })
+
+    if (changed) {
+      localStorage.setItem(key, JSON.stringify(updated))
     }
   }
 
@@ -228,6 +387,8 @@ export class OfferSystem {
     const offers = this.getAllOffers()
     const updated = offers.filter(o => o.productId !== productId)
     this.saveOffers(updated)
+    // al eliminar oferta, sincronizar precios de todos
+    this.syncAllUserDiscounts()
   }
 
   // -------------------------------

@@ -14,7 +14,7 @@ import { RecuperacionContrasenaDialog } from "@/components/dialogo-recuperacion-
 interface AuthDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  defaultTab?: "login" | "register" // ✅ corregido: ahora se usa defaultTab
+  defaultTab?: "login" | "register"
   onSuccess?: () => void
 }
 
@@ -130,7 +130,7 @@ export function AuthDialog({ open, onOpenChange, onSuccess, defaultTab = "login"
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-bebas text-3xl text-center">IMPERIUS FITNESS GYM</DialogTitle>
+            <DialogTitle className="font-bebas text-3xl text-center">GYM IMPERIUS FITNESS</DialogTitle>
             <DialogDescription className="text-center">
               {activeMode === "login"
                 ? "Inicia sesión con tu cuenta"

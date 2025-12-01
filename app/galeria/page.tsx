@@ -94,12 +94,6 @@ const galleryImages = [
 /**
  * Página de galería de fotos del gimnasio
  * Muestra imágenes de las instalaciones organizadas por categorías
- *
- * Características:
- * - Filtrado por categorías (Pesas, Funcional, Clases, Cardio)
- * - Grid responsive de imágenes
- * - Efecto hover con título de la imagen
- * - Soporte para filtro desde URL (?filter=pesas)
  */
 export default function GaleriaPage() {
   const searchParams = useSearchParams()
@@ -115,85 +109,124 @@ export default function GaleriaPage() {
 
   // Filtrar imágenes según la categoría seleccionada
   const filteredImages =
-    selectedCategory === "todas" ? galleryImages : galleryImages.filter((img) => img.category === selectedCategory)
+    selectedCategory === "todas"
+      ? galleryImages
+      : galleryImages.filter((img) => img.category === selectedCategory)
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="flex flex-col min-h-screen">
       {/* Encabezado de navegación */}
       <Header />
 
       {/* Espaciador para el header fijo */}
       <div className="h-20" />
 
-      <section className="py-24">
-        <div className="container mx-auto px-4">
-          {/* Encabezado de la galería */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-3 mb-4">
-              <div className="h-1 w-12 bg-primary" />
-              <span className="text-primary font-semibold tracking-wider uppercase text-sm">Galería de Fotos</span>
-              <div className="h-1 w-12 bg-primary" />
-            </div>
-            <h1 className="font-bebas text-5xl md:text-7xl text-foreground mb-4 tracking-tight">
-              NUESTRAS <span className="text-primary">INSTALACIONES</span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Conoce cada rincón de Imperius Fitness Gym. Instalaciones de primer nivel para tu entrenamiento.
-            </p>
-          </div>
+      {/* Contenido principal */}
+      <main
+        className="flex-1 relative overflow-hidden"
+        style={{
+          backgroundImage: "url('/fondos/textura-grunge-oscuro.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
+        {/* Capa oscura para contraste */}
+        <div className="absolute inset-0 bg-black/45 pointer-events-none" />
 
-          {/* Filtros de categoría */}
-          <div className="flex flex-wrap justify-center gap-4 mb-12">
-            {categories.map((category) => (
-              <Button
-                key={category.id}
-                onClick={() => setSelectedCategory(category.id)}
-                variant={selectedCategory === category.id ? "default" : "outline"}
-                className={`font-semibold ${
-                  selectedCategory === category.id
-                    ? "bg-primary text-primary-foreground"
-                    : "border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                }`}
-              >
-                {category.name}
-              </Button>
-            ))}
-          </div>
+        {/* Líneas diagonales suaves */}
+        <div
+          className="absolute inset-0 opacity-[0.09] pointer-events-none"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(135deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 1px, transparent 2px, transparent 7px)",
+          }}
+        />
 
-          {/* Grid de imágenes */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-            {filteredImages.map((image) => (
-              <div
-                key={image.id}
-                className="group relative overflow-hidden rounded-lg border border-border hover:border-primary transition-all duration-300 cursor-pointer"
-              >
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img
-                    src={image.image || "/placeholder.svg"}
-                    alt={image.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
+        {/* Vignette para enfocar el centro */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ boxShadow: "inset 0 0 180px rgba(0,0,0,0.85)" }}
+        />
+
+        {/* Contenido normal */}
+        <div className="relative z-10">
+          <section className="py-24">
+            <div className="container mx-auto px-4">
+              {/* Encabezado de la galería */}
+              <div className="text-center mb-16">
+                <div className="inline-flex items-center gap-3 mb-4">
+                  <div className="h-1 w-12 bg-primary" />
+                  <span className="text-primary font-semibold tracking-wider uppercase text-sm">
+                    Galería de Fotos
+                  </span>
+                  <div className="h-1 w-12 bg-primary" />
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                  <div className="p-6 w-full">
-                    <h3 className="text-white font-bebas text-2xl">{image.title}</h3>
-                  </div>
-                </div>
+                <h1 className="font-bebas text-5xl md:text-7xl text-foreground mb-4 tracking-tight">
+                  NUESTRAS <span className="text-primary">INSTALACIONES</span>
+                </h1>
+                <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                  Conoce cada rincón de Imperius Fitness Gym. Instalaciones de primer nivel para tu
+                  entrenamiento.
+                </p>
               </div>
-            ))}
-          </div>
 
-          {/* Mensaje si no hay imágenes */}
-          {filteredImages.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg">No hay imágenes en esta categoría.</p>
+              {/* Filtros de categoría */}
+              <div className="flex flex-wrap justify-center gap-4 mb-12">
+                {categories.map((category) => (
+                  <Button
+                    key={category.id}
+                    onClick={() => setSelectedCategory(category.id)}
+                    variant={selectedCategory === category.id ? "default" : "outline"}
+                    className={`font-semibold ${
+                      selectedCategory === category.id
+                        ? "bg-primary text-primary-foreground"
+                        : "border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                    }`}
+                  >
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Grid de imágenes */}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
+                {filteredImages.map((image) => (
+                  <div
+                    key={image.id}
+                    className="group relative overflow-hidden rounded-lg border border-border hover:border-primary transition-all duration-300 cursor-pointer"
+                  >
+                    <div className="aspect-[4/3] overflow-hidden">
+                      <img
+                        src={image.image || "/placeholder.svg"}
+                        alt={image.title}
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
+                      <div className="p-6 w-full">
+                        <h3 className="text-white font-bebas text-2xl">{image.title}</h3>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Mensaje si no hay imágenes */}
+              {filteredImages.length === 0 && (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground text-lg">
+                    No hay imágenes en esta categoría.
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+          </section>
         </div>
-      </section>
+      </main>
 
       {/* Pie de página */}
       <Footer />
-    </main>
+    </div>
   )
 }

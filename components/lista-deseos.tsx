@@ -1,8 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
 import { Heart, ShoppingCart, Trash2, Bell } from "lucide-react"
 import { useAuth } from "@/contexts/contexto-autenticacion"
 import { AuthDialog } from "./dialogo-autenticacion"
@@ -30,56 +36,111 @@ export function WishlistDrawer() {
   const { isAuthenticated, user } = useAuth()
   const { addItem } = useCart()
 
-  // ==================================================
-  // 📌 CARGAR LISTA DE DESEOS AL INICIAR
-  // ==================================================
-  useEffect(() => {
-    if (user && isAuthenticated) {
-      loadWishlist()
+  const getUserWishlistKey = useCallback(
+    () => (user ? `imperius_wishlist_${user.id}` : ""),
+    [user],
+  )
+
+  // --------------------------------------------------
+  // Cargar wishlist desde localStorage + aplicar ofertas
+  // --------------------------------------------------
+  const loadWishlist = useCallback(() => {
+    if (!user || !isAuthenticated || typeof window === "undefined") {
+      setWishlistItems([])
+      return
     }
-  }, [user, isAuthenticated])
 
-  const getUserWishlistKey = () => (user ? `imperius_wishlist_${user.id}` : "")
-
-  const loadWishlist = () => {
     const key = getUserWishlistKey()
     if (!key) return
 
     const saved = localStorage.getItem(key)
-
-    if (!saved) return setWishlistItems([])
+    if (!saved) {
+      setWishlistItems([])
+      return
+    }
 
     const parsed: WishlistItem[] = JSON.parse(saved)
 
-    // 🔥 Actualizar precios si hay oferta activa
+    // 🔥 Aquí se vuelven a consultar las ofertas activas
     const updated = parsed.map((item) => {
       const offer = OfferSystem.getActiveOffer(item.id)
-
-      if (!offer) return item
+      if (!offer) {
+        return {
+          ...item,
+          hasDiscount: false,
+          discountPercentage: undefined,
+          // si en localStorage quedó guardado el precio con oferta,
+          // pero la oferta ya terminó, volvemos al original si existe:
+          price: item.originalPrice ?? item.price,
+        }
+      }
 
       return {
         ...item,
-        price: offer.currentPrice,
-        originalPrice: offer.originalPrice,
-        discountPercentage: offer.discountPercentage,
         hasDiscount: true,
+        price: offer.currentPrice,
+        originalPrice: offer.originalPrice ?? item.originalPrice ?? item.price,
+        discountPercentage: offer.discountPercentage,
       }
     })
 
     setWishlistItems(updated)
-  }
+  }, [user, isAuthenticated, getUserWishlistKey])
 
   const saveWishlist = (items: WishlistItem[]) => {
+    if (typeof window === "undefined") return
     const key = getUserWishlistKey()
     if (!key) return
     localStorage.setItem(key, JSON.stringify(items))
+
+    if (typeof window !== "undefined" && user) {
+      window.dispatchEvent(
+        new CustomEvent("imperius:wishlist-updated", {
+          detail: { userId: user.id },
+        }),
+      )
+    }
   }
 
-  // ==================================================
-  // ➕ AGREGAR A LISTA DE DESEOS
-  // ==================================================
+  // Cargar al iniciar sesión / cambiar usuario
+  useEffect(() => {
+    loadWishlist()
+  }, [loadWishlist])
+
+  // Escuchar cuando otra parte actualice la wishlist (add / remove / OfferSystem)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const handler = (event: Event) => {
+      const ev = event as CustomEvent<{ userId: string }>
+      if (!user) return
+      if (!ev.detail || ev.detail.userId !== user.id) return
+      loadWishlist()
+    }
+
+    window.addEventListener("imperius:wishlist-updated", handler)
+    return () => {
+      window.removeEventListener("imperius:wishlist-updated", handler)
+    }
+  }, [user, loadWishlist])
+
+  // 🔁 Refresco periódico para pillar nuevas ofertas sin recargar
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const id = setInterval(() => {
+      // actualiza estados de las ofertas en localStorage
+      OfferSystem.updateOffersStatus()
+      // y vuelve a aplicar ofertas a los productos de la wishlist
+      loadWishlist()
+    }, 15 * 1000) // cada 15 segundos
+
+    return () => clearInterval(id)
+  }, [loadWishlist])
+
+  // ==========================================
+  // ➕ AGREGAR A WISHLIST (usado dentro del drawer)
+  // ==========================================
   const addToWishlistInternal = (product: Omit<WishlistItem, "hasDiscount">) => {
-    if (!isAuthenticated) {
+    if (!isAuthenticated || !user) {
       setShowAuthDialog(true)
       return
     }
@@ -102,23 +163,23 @@ export function WishlistDrawer() {
     saveWishlist(updated)
   }
 
-  // ==================================================
-  // ❌ ELIMINAR DE LISTA DE DESEOS
-  // ==================================================
+  // ==========================================
+  // ❌ ELIMINAR DE WISHLIST
+  // ==========================================
   const removeFromWishlist = (productId: string) => {
     const updated = wishlistItems.filter((item) => item.id !== productId)
     setWishlistItems(updated)
     saveWishlist(updated)
   }
 
-  // ==================================================
+  // ==========================================
   // 🛒 MOVER AL CARRITO
-  // ==================================================
+  // ==========================================
   const moveToCart = (item: WishlistItem) => {
     addItem({
       id: item.id,
       name: item.name,
-      price: item.price, // ya con descuento si aplica
+      price: item.price, // ya con descuento si lo tiene
       image: item.image,
       type: item.type,
       category: item.category,
@@ -133,7 +194,11 @@ export function WishlistDrawer() {
     <>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative text-secondary-foreground hover:text-primary">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative text-secondary-foreground hover:text-primary"
+          >
             <Heart className="h-5 w-5" />
             {wishlistCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
@@ -148,14 +213,18 @@ export function WishlistDrawer() {
             <SheetTitle className="flex items-center gap-2">
               <Heart className="h-6 w-6 text-red-500" />
               Mi Lista de Deseos
-              <Badge variant="secondary" className="ml-2">{wishlistCount}</Badge>
+              <Badge variant="secondary" className="ml-2">
+                {wishlistCount}
+              </Badge>
             </SheetTitle>
           </SheetHeader>
 
           {wishlistItems.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center p-6">
               <Heart className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Tu lista de deseos está vacía</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                Tu lista de deseos está vacía
+              </h3>
               <p className="text-muted-foreground text-center mb-4">
                 Guarda tus productos favoritos aquí para comprarlos después
               </p>
@@ -164,15 +233,22 @@ export function WishlistDrawer() {
             <div className="flex-1 overflow-y-auto p-4">
               <div className="space-y-4">
                 {wishlistItems.map((item) => (
-                  <div key={item.id} className="flex gap-3 p-3 border rounded-lg bg-card">
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded-md"
-                    />
+                  <div
+                    key={item.id}
+                    className="flex gap-3 p-3 border rounded-lg bg-card"
+                  >
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded-md"
+                      />
+                    )}
 
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm truncate">{item.name}</h4>
+                      <h4 className="font-semibold text-sm truncate">
+                        {item.name}
+                      </h4>
 
                       {/* PRECIOS */}
                       <div className="flex items-center gap-2 mt-1">
@@ -180,11 +256,12 @@ export function WishlistDrawer() {
                           ${item.price.toLocaleString("es-CO")}
                         </span>
 
-                        {item.originalPrice && item.originalPrice !== item.price && (
-                          <span className="text-sm line-through text-muted-foreground">
-                            ${item.originalPrice.toLocaleString("es-CO")}
-                          </span>
-                        )}
+                        {item.originalPrice &&
+                          item.originalPrice !== item.price && (
+                            <span className="text-sm line-through text-muted-foreground">
+                              ${item.originalPrice.toLocaleString("es-CO")}
+                            </span>
+                          )}
 
                         {item.discountPercentage && (
                           <Badge variant="destructive" className="text-xs">
@@ -202,7 +279,11 @@ export function WishlistDrawer() {
                     </div>
 
                     <div className="flex flex-col gap-1">
-                      <Button size="sm" onClick={() => moveToCart(item)} className="h-8">
+                      <Button
+                        size="sm"
+                        onClick={() => moveToCart(item)}
+                        className="h-8"
+                      >
                         <ShoppingCart className="h-3 w-3 mr-1" />
                       </Button>
                       <Button
@@ -228,17 +309,16 @@ export function WishlistDrawer() {
 }
 
 // ==================================================
-// ✔ HOOK PARA USAR EN COMPONENTES INTERNOS
+// HOOK para usar en otros componentes (cards, etc.)
 // ==================================================
 export function useWishlist() {
   const { user, isAuthenticated } = useAuth()
 
   const addToWishlist = (product: Omit<WishlistItem, "hasDiscount">) => {
-    if (!user || !isAuthenticated) return false
+    if (!user || !isAuthenticated || typeof window === "undefined") return false
 
     const key = `imperius_wishlist_${user.id}`
     const saved = localStorage.getItem(key)
-
     const current: WishlistItem[] = saved ? JSON.parse(saved) : []
 
     const exists = current.some((item) => item.id === product.id)
@@ -256,11 +336,18 @@ export function useWishlist() {
 
     const updated = [...current, newItem]
     localStorage.setItem(key, JSON.stringify(updated))
+
+    window.dispatchEvent(
+      new CustomEvent("imperius:wishlist-updated", {
+        detail: { userId: user.id },
+      }),
+    )
+
     return true
   }
 
   const checkInWishlist = (id: string) => {
-    if (!user) return false
+    if (!user || typeof window === "undefined") return false
     const key = `imperius_wishlist_${user.id}`
     const saved = localStorage.getItem(key)
     if (!saved) return false
@@ -268,18 +355,27 @@ export function useWishlist() {
   }
 
   const removeFromWishlist = (id: string) => {
-    if (!user) return false
+    if (!user || typeof window === "undefined") return false
     const key = `imperius_wishlist_${user.id}`
     const saved = localStorage.getItem(key)
     if (!saved) return false
 
-    const updated = JSON.parse(saved).filter((item: WishlistItem) => item.id !== id)
+    const updated = JSON.parse(saved).filter(
+      (item: WishlistItem) => item.id !== id,
+    )
     localStorage.setItem(key, JSON.stringify(updated))
+
+    window.dispatchEvent(
+      new CustomEvent("imperius:wishlist-updated", {
+        detail: { userId: user.id },
+      }),
+    )
+
     return true
   }
 
   const getWishlistItems = () => {
-    if (!user) return []
+    if (!user || typeof window === "undefined") return []
     const key = `imperius_wishlist_${user.id}`
     const saved = localStorage.getItem(key)
     return saved ? JSON.parse(saved) : []

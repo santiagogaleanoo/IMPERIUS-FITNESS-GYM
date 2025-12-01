@@ -9,7 +9,7 @@ import { QuienesSomosSection } from "@/components/seccion-quienes-somos"
 
 export default function Home() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-black text-white">
       <Header />
 
       {/* Hero (se deja el componente tal cual) */}

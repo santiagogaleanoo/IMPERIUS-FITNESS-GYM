@@ -1,14 +1,13 @@
-// components/encabezado.tsx
+// components/encabezado.tsx (ACTUALIZADO)
 "use client"
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, X, User, LogOut, ChevronDown } from "lucide-react"
+import { Menu, X, User, LogOut, ChevronDown, Home } from "lucide-react"
 import Image from "next/image"
 import { CartDrawer } from "@/components/carrito-compras"
-// ✔ ruta relativa porque está en la misma carpeta
 import { WishlistDrawer } from "./lista-deseos"
 import { useAuth } from "@/contexts/contexto-autenticacion"
 import { AuthDialog } from "@/components/dialogo-autenticacion"
@@ -32,6 +31,7 @@ export function Header() {
 
   const { user, logout, isAuthenticated } = useAuth()
   const pathname = usePathname()
+  const router = useRouter()
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -45,34 +45,58 @@ export function Header() {
   }, [])
 
   const handleLogoutClick = () => setShowLogoutConfirm(true)
+
   const confirmLogout = () => {
     logout()
     setShowLogoutConfirm(false)
   }
 
+  // 🔥 FUNCIÓN MEJORADA PARA NAVEGACIÓN
   const navigateToSection = (sectionId: string) => {
     setIsMenuOpen(false)
     setIsApartadosDropdownOpen(false)
 
-    if (sectionId === "inicio") {
-      window.scrollTo({ top: 0, behavior: "smooth" })
-      return
+    // Si ya estamos en la página principal, solo hacemos scroll
+    if (pathname === "/") {
+      if (sectionId === "inicio") {
+        window.scrollTo({ top: 0, behavior: "smooth" })
+      } else {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" })
+        }
+      }
+    } else {
+      // Si estamos en otra página (tienda, galería), redirigimos a la principal con el hash
+      router.push(`/#${sectionId}`)
     }
+  }
+
+  // 🔥 FUNCIÓN PARA IR AL MENÚ PRINCIPAL
+  const goToMainMenu = () => {
+    setIsMenuOpen(false)
+    setIsApartadosDropdownOpen(false)
 
     if (pathname === "/") {
-      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" })
+      // Si ya estamos en la página principal, hacer scroll al inicio
+      window.scrollTo({ top: 0, behavior: "smooth" })
     } else {
-      window.location.href = `/#${sectionId}`
+      // Si estamos en otra página, redirigir a la página principal
+      router.push("/")
     }
   }
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 bg-secondary/95 backdrop-blur-sm border-b border-primary/20">
+      {/* Mejoras en el header para gradientes sutiles */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/95 to-black/80 backdrop-blur-sm border-b border-yellow-600/30 shadow-xl">
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3 flex-shrink-0">
+            {/* Logo - Ahora hace click al menú principal */}
+            <button
+              onClick={goToMainMenu}
+              className="flex items-center gap-3 flex-shrink-0 hover:opacity-80 transition-opacity"
+            >
               <Image
                 src="/imperius-logo.png"
                 alt="Imperius Fitness Gym"
@@ -81,16 +105,16 @@ export function Header() {
                 className="object-contain"
               />
               <div className="text-2xl font-bebas text-primary tracking-wider">
-                GYM IMPERIOUS FITNESS
+                GYM IMPERIUS FITNESS
               </div>
-            </Link>
+            </button>
 
             {/* Navegación Desktop */}
             <nav className="hidden md:flex items-center gap-8 absolute left-1/2 transform -translate-x-1/2">
               {/* Menú desplegable Apartados */}
               <div ref={dropdownRef} className="relative">
                 <button
-                  className="flex items-center gap-1 text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  className="flex items-center gap-1 text-white hover:text-primary transition-colors font-medium"
                   onClick={() => setIsApartadosDropdownOpen(!isApartadosDropdownOpen)}
                 >
                   Apartados
@@ -102,28 +126,29 @@ export function Header() {
                 </button>
 
                 {isApartadosDropdownOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-52 bg-secondary border border-primary/20 rounded-lg shadow-lg py-2 z-50">
+                  <div className="absolute top-full left-0 mt-2 w-52 bg-black/95 backdrop-blur-sm border border-yellow-600/30 rounded-lg shadow-lg py-2 z-50">
                     <button
-                      onClick={() => navigateToSection("inicio")}
-                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      onClick={goToMainMenu}
+                      className="flex items-center gap-2 w-full text-left px-4 py-2 text-white hover:bg-primary/20 hover:text-primary transition-colors"
                     >
+                      <Home className="h-4 w-4" />
                       Menú Principal
                     </button>
                     <button
                       onClick={() => navigateToSection("productos-destacados")}
-                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      className="block w-full text-left px-4 py-2 text-white hover:bg-primary/20 hover:text-primary transition-colors"
                     >
                       Productos Destacados
                     </button>
                     <button
                       onClick={() => navigateToSection("instalaciones")}
-                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      className="block w-full text-left px-4 py-2 text-white hover:bg-primary/20 hover:text-primary transition-colors"
                     >
                       Nuestras Instalaciones
                     </button>
                     <button
                       onClick={() => navigateToSection("quienes-somos")}
-                      className="block w-full text-left px-4 py-2 text-secondary-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                      className="block w-full text-left px-4 py-2 text-white hover:bg-primary/20 hover:text-primary transition-colors"
                     >
                       Quiénes Somos
                     </button>
@@ -133,25 +158,33 @@ export function Header() {
 
               <Link
                 href="/#membresias"
-                className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                className="text-white hover:text-primary transition-colors font-medium"
+                onClick={(e) => {
+                  e.preventDefault()
+                  navigateToSection("membresias")
+                }}
               >
                 Membresías
               </Link>
               <Link
                 href="/tienda"
-                className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                className="text-white hover:text-primary transition-colors font-medium"
               >
                 Tienda
               </Link>
               <Link
                 href="/galeria"
-                className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                className="text-white hover:text-primary transition-colors font-medium"
               >
                 Galería
               </Link>
               <Link
                 href="/#contacto"
-                className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                className="text-white hover:text-primary transition-colors font-medium"
+                onClick={(e) => {
+                  e.preventDefault()
+                  navigateToSection("contacto")
+                }}
               >
                 Contacto
               </Link>
@@ -163,14 +196,14 @@ export function Header() {
               <CartDrawer />
               {isAuthenticated ? (
                 <div className="flex items-center gap-2">
-                  <span className="text-secondary-foreground font-medium text-sm">
+                  <span className="text-white font-medium text-sm">
                     Hola, {user?.name}
                   </span>
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={handleLogoutClick}
-                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground bg-transparent h-8 w-8"
+                    className="border-primary text-primary hover:bg-primary hover:text-black bg-transparent h-8 w-8"
                   >
                     <LogOut className="h-4 w-4" />
                   </Button>
@@ -183,7 +216,7 @@ export function Header() {
                       setAuthMode("login")
                       setShowAuthDialog(true)
                     }}
-                    className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-semibold h-8 px-3 text-sm"
+                    className="border-primary text-primary hover:bg-primary hover:text-black font-semibold h-8 px-3 text-sm"
                   >
                     <User className="mr-1 h-4 w-4" />
                     Iniciar Sesión
@@ -193,7 +226,7 @@ export function Header() {
                       setAuthMode("register")
                       setShowAuthDialog(true)
                     }}
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-8 px-3 text-sm"
+                    className="bg-primary text-black hover:bg-primary/90 font-semibold h-8 px-3 text-sm"
                   >
                     Registrarse
                   </Button>
@@ -203,7 +236,7 @@ export function Header() {
 
             {/* Botón menú móvil */}
             <button
-              className="md:hidden text-secondary-foreground"
+              className="md:hidden text-white"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
             >
               {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -212,78 +245,75 @@ export function Header() {
 
           {/* Menú móvil */}
           {isMenuOpen && (
-            <div className="md:hidden py-3 border-t border-primary/20">
+            <div className="md:hidden py-3 border-t border-yellow-600/30">
               <nav className="flex flex-col gap-4">
-                <div className="border-b border-primary/20 pb-2">
-                  <div className="text-secondary-foreground font-medium mb-2">
-                    Apartados
-                  </div>
+                <div className="border-b border-yellow-600/30 pb-2">
+                  <div className="text-white font-medium mb-2">Apartados</div>
                   <div className="flex flex-col gap-2 ml-4">
                     <button
-                      onClick={() => navigateToSection("inicio")}
-                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                      onClick={goToMainMenu}
+                      className="flex items-center gap-2 text-white hover:text-primary transition-colors text-left"
                     >
+                      <Home className="h-4 w-4" />
                       Menú Principal
                     </button>
                     <button
                       onClick={() => navigateToSection("productos-destacados")}
-                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                      className="text-white hover:text-primary transition-colors text-left"
                     >
                       Productos Destacados
                     </button>
                     <button
                       onClick={() => navigateToSection("instalaciones")}
-                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                      className="text-white hover:text-primary transition-colors text-left"
                     >
                       Nuestras Instalaciones
                     </button>
                     <button
                       onClick={() => navigateToSection("quienes-somos")}
-                      className="text-secondary-foreground hover:text-primary transition-colors text-left"
+                      className="text-white hover:text-primary transition-colors text-left"
                     >
                       Quiénes Somos
                     </button>
                   </div>
                 </div>
 
-                <Link
-                  href="/#membresias"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
+                <button
+                  onClick={() => navigateToSection("membresias")}
+                  className="text-white hover:text-primary transition-colors font-medium text-left"
                 >
                   Membresías
-                </Link>
+                </button>
                 <Link
                   href="/tienda"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  className="text-white hover:text-primary transition-colors font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Tienda
                 </Link>
                 <Link
                   href="/galeria"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
+                  className="text-white hover:text-primary transition-colors font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Galería
                 </Link>
-                <Link
-                  href="/#contacto"
-                  className="text-secondary-foreground hover:text-primary transition-colors font-medium"
-                  onClick={() => setIsMenuOpen(false)}
+                <button
+                  onClick={() => navigateToSection("contacto")}
+                  className="text-white hover:text-primary transition-colors font-medium text-left"
                 >
                   Contacto
-                </Link>
+                </button>
 
                 {isAuthenticated ? (
                   <>
-                    <div className="text-secondary-foreground font-medium">
+                    <div className="text-white font-medium">
                       Hola, {user?.name}
                     </div>
                     <Button
                       variant="outline"
                       onClick={handleLogoutClick}
-                      className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full bg-transparent"
+                      className="border-primary text-primary hover:bg-primary hover:text-black w-full bg-transparent"
                     >
                       <LogOut className="mr-2 h-4 w-4" />
                       Cerrar Sesión
@@ -298,7 +328,7 @@ export function Header() {
                         setShowAuthDialog(true)
                         setIsMenuOpen(false)
                       }}
-                      className="border-primary text-primary hover:bg-primary hover:text-primary-foreground w-full"
+                      className="border-primary text-primary hover:bg-primary hover:text-black w-full"
                     >
                       Iniciar Sesión
                     </Button>
@@ -309,7 +339,7 @@ export function Header() {
                         setShowAuthDialog(true)
                         setIsMenuOpen(false)
                       }}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
+                      className="bg-primary text-black hover:bg-primary/90 w-full"
                     >
                       Registrarse
                     </Button>
@@ -328,19 +358,21 @@ export function Header() {
       />
 
       <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent className="bg-black/95 backdrop-blur-sm border border-yellow-600/30 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle>¿Cerrar sesión?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-gray-300">
               ¿Estás seguro de que deseas cerrar sesión? Tu carrito se guardará
               para cuando vuelvas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="bg-transparent text-white border-gray-600 hover:bg-gray-800">
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmLogout}
-              className="bg-primary hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90 text-black"
             >
               Sí, cerrar sesión
             </AlertDialogAction>
