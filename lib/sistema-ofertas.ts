@@ -163,7 +163,7 @@ export class OfferSystem {
   // -------------------------------
   // 📍 ACTUALIZAR LISTA DE DESEOS (al CREAR oferta)
   // -------------------------------
-  private static updateWishlistItemDiscount(
+    private static updateWishlistItemDiscount(
     userId: string,
     userEmail: string,
     offer: ProductOffer,
@@ -176,6 +176,7 @@ export class OfferSystem {
     let updated = false
     let productName = ""
     let priceBefore = 0
+    let productImage: string | null = null
 
     const updatedWishlist = wishlist.map((item: any) => {
       if (item.id === offer.productId) {
@@ -184,6 +185,7 @@ export class OfferSystem {
 
         productName = item.name
         priceBefore = originalPrice
+        productImage = item.image ?? null
 
         return {
           ...item,
@@ -206,16 +208,20 @@ export class OfferSystem {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "OFFER",
           email: userEmail,
           productName,
           oldPrice: priceBefore,
           newPrice: offer.currentPrice,
           discountPercentage: offer.discountPercentage,
+          // 🔥 ahora sí mandamos fechas e imagen:
+          offerStart: offer.startDate,
+          offerEnd: offer.endDate,
+          productImage,
         }),
       }).catch(() => {})
     }
   }
+
 
   // -------------------------------
   // 💳 ACTUALIZAR PRECIOS EN CARRITO (al CREAR oferta)
