@@ -34,9 +34,8 @@ interface ProductQuickViewProps {
 }
 
 export function ProductQuickView({ product, open, onOpenChange }: ProductQuickViewProps) {
-
   // =======================================
-  // ESTADOS — deben ir SIEMPRE arriba
+  // ESTADOS
   // =======================================
   const [quantity, setQuantity] = useState(1)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
@@ -50,7 +49,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
   const { addToWishlist, checkInWishlist } = useWishlist()
 
   // =======================================
-  // ⭐ CALIFICACIONES SEGURAS
+  // ⭐ CALIFICACIONES
   // =======================================
   useEffect(() => {
     if (!product) {
@@ -63,7 +62,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
   }, [product])
 
   // =======================================
-  // ⭐ WISHLIST SINCRONIZADO
+  // ⭐ WISHLIST
   // =======================================
   useEffect(() => {
     if (!product) return setIsInWishlist(false)
@@ -71,7 +70,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
   }, [product, checkInWishlist])
 
   // =======================================
-  // ⭐ OFERTAS ACTIVAS
+  // ⭐ OFERTA ACTIVA DEL PRODUCTO
   // =======================================
   const activeOffer = product ? OfferSystem.getActiveOffer(product.id) : null
 
@@ -85,17 +84,23 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
   if (!product) return null
 
   // =======================================
+  // 🧾 ÍTEMS PARA "COMPRAR AHORA"
+  // (se pasan al CheckoutDialog)
+  // =======================================
+  const checkoutItems = [
+    {
+      id: product.id,
+      name: product.name,
+      price: displayPrice,
+      quantity,
+      image: product.image,
+      type: product.type,
+    },
+  ]
+
+  // =======================================
   // 🛒 AGREGAR AL CARRITO
   // =======================================
-  const handleAddToCart = () => {
-    if (!isAuthenticated) {
-      setPendingAction(() => agregarAlCarrito)
-      setShowAuthDialog(true)
-      return
-    }
-    agregarAlCarrito()
-  }
-
   const agregarAlCarrito = () => {
     for (let i = 0; i < quantity; i++) {
       addItem({
@@ -104,7 +109,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
         price: displayPrice,
         image: product.image,
         type: product.type,
-        category: product.category
+        category: product.category,
       })
     }
 
@@ -116,11 +121,21 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
     }, 1500)
   }
 
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
+      setPendingAction(() => agregarAlCarrito)
+      setShowAuthDialog(true)
+      return
+    }
+    agregarAlCarrito()
+  }
+
   // =======================================
   // 💳 COMPRAR AHORA
   // =======================================
   const handleBuyNow = () => {
     if (!isAuthenticated) {
+      // Después de iniciar sesión, solo abrimos el checkout
       setPendingAction(() => () => setShowCheckout(true))
       setShowAuthDialog(true)
       return
@@ -129,7 +144,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
   }
 
   // =======================================
-  // ❤ AGREGAR A WISHLIST
+  // ❤ WISHLIST
   // =======================================
   const handleAddToWishlist = () => {
     if (!isAuthenticated) return setShowAuthDialog(true)
@@ -140,45 +155,43 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
       price: displayPrice,
       image: product.image,
       type: product.type,
-      category: product.category
+      category: product.category,
     })
 
     if (added) setIsInWishlist(true)
   }
 
   // =======================================
-  // 🖼 RENDER
+  // RENDER
   // =======================================
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-
           {/* Requerido por Radix */}
           <VisuallyHidden>
             <DialogTitle>{product.name}</DialogTitle>
           </VisuallyHidden>
 
-          {/* ======================== */}
-          {/* ✔ VISTA DE ÉXITO         */}
-          {/* ======================== */}
+          {/* Vista de éxito al agregar al carrito */}
           {showSuccess ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="rounded-full bg-primary/20 p-6 mb-4 animate-in zoom-in duration-300">
                 <Check className="h-16 w-16 text-primary" />
               </div>
               <h3 className="font-bebas text-3xl">¡AGREGADO AL CARRITO!</h3>
-              <p className="text-muted-foreground">Tu producto ha sido agregado exitosamente</p>
+              <p className="text-muted-foreground">
+                Tu producto ha sido agregado exitosamente
+              </p>
             </div>
           ) : (
-
-            // ========================
-            // ✔ CONTENIDO DEL MODAL
-            // ========================
             <Tabs defaultValue="detalles" className="w-full">
-
-              {/* TABS */}
-              <TabsList className={`grid w-full ${product.type === "product" ? "grid-cols-2" : "grid-cols-1"} mb-6`}>
+              {/* Tabs encabezado */}
+              <TabsList
+                className={`grid w-full ${
+                  product.type === "product" ? "grid-cols-2" : "grid-cols-1"
+                } mb-6`}
+              >
                 <TabsTrigger value="detalles">Detalles</TabsTrigger>
 
                 {product.type === "product" && (
@@ -188,12 +201,9 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
                 )}
               </TabsList>
 
-              {/* ======================== */}
-              {/* TAB — DETALLES           */}
-              {/* ======================== */}
+              {/* TAB DETALLES */}
               <TabsContent value="detalles">
                 <div className="grid md:grid-cols-2 gap-8">
-
                   {/* Imagen */}
                   <div className="relative aspect-square bg-muted rounded-lg overflow-hidden">
                     <img
@@ -203,12 +213,13 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
                     />
                   </div>
 
-                  {/* Info */}
+                  {/* Información */}
                   <div className="flex flex-col">
+                    <h2 className="font-bebas text-4xl mb-2">
+                      {product.name}
+                    </h2>
 
-                    <h2 className="font-bebas text-4xl mb-2">{product.name}</h2>
-
-                    {/* ⭐ Rating */}
+                    {/* Rating */}
                     {product.type === "product" && (
                       <div className="flex items-center gap-2 mb-4">
                         <CalificacionEstrellas
@@ -223,7 +234,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
                       </div>
                     )}
 
-                    {/* 💰 Precios */}
+                    {/* Precios */}
                     <div className="mb-6">
                       {originalPrice && (
                         <div className="text-lg text-muted-foreground line-through">
@@ -242,16 +253,20 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
                       )}
                     </div>
 
-                    {/* Cantidad */}
+                    {/* Cantidad solo para productos físicos */}
                     {product.type === "product" && (
                       <div className="mb-6">
-                        <label className="block text-sm font-medium mb-2">Cantidad</label>
+                        <label className="block text-sm font-medium mb-2">
+                          Cantidad
+                        </label>
 
                         <div className="flex items-center gap-3">
                           <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => setQuantity((p) => Math.max(1, p - 1))}
+                            onClick={() =>
+                              setQuantity((p) => Math.max(1, p - 1))
+                            }
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
@@ -271,7 +286,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
                       </div>
                     )}
 
-                    {/* Botones */}
+                    {/* Botones de acción */}
                     <div className="space-y-3">
                       <Button
                         onClick={handleAddToWishlist}
@@ -280,9 +295,15 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
                         disabled={isInWishlist}
                       >
                         <Heart
-                          className={`mr-2 h-5 w-5 ${isInWishlist ? "fill-red-500 text-red-500" : ""}`}
+                          className={`mr-2 h-5 w-5 ${
+                            isInWishlist
+                              ? "fill-red-500 text-red-500"
+                              : ""
+                          }`}
                         />
-                        {isInWishlist ? "En Lista de Deseos" : "Agregar a Deseos"}
+                        {isInWishlist
+                          ? "En Lista de Deseos"
+                          : "Agregar a Deseos"}
                       </Button>
 
                       <Button
@@ -306,9 +327,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
                 </div>
               </TabsContent>
 
-              {/* ======================== */}
-              {/* TAB — RESEÑAS           */}
-              {/* ======================== */}
+              {/* TAB RESEÑAS */}
               {product.type === "product" && (
                 <TabsContent value="resenas">
                   <SeccionResenasProducto
@@ -322,12 +341,14 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
         </DialogContent>
       </Dialog>
 
-      {/* DIALOGOS */}
+      {/* Diálogo de autenticación */}
       <AuthDialog open={showAuthDialog} onOpenChange={setShowAuthDialog} />
 
+      {/* Checkout para COMPRAR AHORA */}
       <CheckoutDialog
         open={showCheckout}
         onOpenChange={setShowCheckout}
+        items={checkoutItems} // 👈 aquí está la magia
         onSuccess={() => {
           setShowCheckout(false)
           onOpenChange(false)

@@ -11,14 +11,16 @@ import { calcularCalificacionPromedio } from "@/lib/almacenamiento-resenas"
 import { CalificacionEstrellas } from "./calificacion-estrellas"
 import { OfferSystem, type ProductOffer } from "@/lib/sistema-ofertas"
 
-const products = [
+// Solo los productos más vendidos para el carrusel
+const featuredProducts = [
   {
     id: "product-1",
     name: "Proteína Whey Pro",
     category: "Suplementos",
     price: 180000,
     image: "/whey-protein-container-black-and-gold.jpg",
-    description: "Proteína de suero de alta calidad con 25g de proteína por porción",
+    description:
+      "Proteína de suero de alta calidad con 25g de proteína por porción",
     type: "product" as const,
     features: [
       "25g de proteína por porción",
@@ -30,13 +32,19 @@ const products = [
   },
   {
     id: "product-2",
-    name: "Camiseta Imperious",
+    name: "Camiseta Imperius",
     category: "Ropa",
     price: 100000,
     image: "/black-athletic-t-shirt-with-gold-logo.jpg",
-    description: "Camiseta deportiva de alto rendimiento con tecnología anti-sudor",
+    description:
+      "Camiseta deportiva de alto rendimiento con tecnología anti-sudor",
     type: "product" as const,
-    features: ["Tela transpirable", "Secado rápido", "Logo bordado", "Ajuste atlético"],
+    features: [
+      "Tela transpirable",
+      "Secado rápido",
+      "Logo bordado",
+      "Ajuste atlético",
+    ],
     bestseller: true,
   },
   {
@@ -48,17 +56,6 @@ const products = [
     description: "Fórmula avanzada para energía y concentración máxima",
     type: "product" as const,
     features: ["Energía explosiva", "Mayor concentración", "Sin crash", "Sabor frutal"],
-    bestseller: true,
-  },
-  {
-    id: "product-4",
-    name: "Shorts Deportivos",
-    category: "Ropa",
-    price: 120000,
-    image: "/black-athletic-shorts-with-gold-details.jpg",
-    description: "Shorts de entrenamiento con máxima movilidad y comodidad",
-    type: "product" as const,
-    features: ["Tela elástica", "Bolsillos con cierre", "Cintura ajustable", "Diseño ergonómico"],
     bestseller: true,
   },
   {
@@ -92,7 +89,7 @@ const products = [
 
 export function ShopSection() {
   const [selectedProduct, setSelectedProduct] =
-    useState<(typeof products)[0] | null>(null)
+    useState<(typeof featuredProducts)[0] | null>(null)
   const [showQuickView, setShowQuickView] = useState(false)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoPlaying, setIsAutoPlaying] = useState(true)
@@ -108,7 +105,7 @@ export function ShopSection() {
     if (!isAutoPlaying) return
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % products.length)
+      setCurrentIndex((prev) => (prev + 1) % featuredProducts.length)
     }, 4000)
 
     return () => clearInterval(interval)
@@ -119,39 +116,80 @@ export function ShopSection() {
     const nuevasCalificaciones: {
       [key: string]: { promedio: number; total: number }
     } = {}
-    products.forEach((product) => {
+    featuredProducts.forEach((product) => {
       const { promedio, total } = calcularCalificacionPromedio(product.id)
       nuevasCalificaciones[product.id] = { promedio, total }
     })
     setCalificaciones(nuevasCalificaciones)
   }, [])
 
-  // 🔥 Cargar ofertas activas desde OfferSystem
+  // 🔥 Cargar y refrescar ofertas activas desde OfferSystem
   useEffect(() => {
-    try {
-      const activeOffers = OfferSystem.getAllActiveOffers()
-      const map: { [productId: string]: ProductOffer } = {}
-      activeOffers.forEach((offer) => {
-        map[offer.productId] = offer
-      })
-      setOffersByProduct(map)
-    } catch (error) {
-      console.error("Error al cargar ofertas activas:", error)
+    const loadOffers = () => {
+      try {
+        const activeOffers = OfferSystem.getAllActiveOffers()
+        const map: { [productId: string]: ProductOffer } = {}
+        activeOffers.forEach((offer) => {
+          map[offer.productId] = offer
+        })
+        setOffersByProduct(map)
+      } catch (error) {
+        console.error("Error al cargar ofertas activas:", error)
+      }
     }
+
+    loadOffers()
+
+    // refrescar cada 20 segundos para que se quiten/activen sin recargar
+    const interval = setInterval(loadOffers, 1_000)
+    return () => clearInterval(interval)
   }, [])
 
-  const handleProductClick = (product: (typeof products)[0]) => {
+  // ⭐ Sincronizar el carrusel con las ofertas activas
+  useEffect(() => {
+    const productIdsWithOffer = Object.keys(offersByProduct)
+
+    // Si no hay ofertas, no tocamos el carrusel (se sigue moviendo normal)
+    if (productIdsWithOffer.length === 0) {
+      return
+    }
+
+    // Producto actualmente centrado
+    const currentProduct = featuredProducts[currentIndex]
+    const currentHasOffer =
+      currentProduct && offersByProduct[currentProduct.id]
+
+    // Si el producto centrado ya tiene oferta, no hacemos nada
+    if (currentHasOffer) {
+      return
+    }
+
+    // Buscar el primer producto destacado que tenga oferta
+    const firstOfferId = productIdsWithOffer[0]
+    const newIndex = featuredProducts.findIndex(
+      (p) => p.id === firstOfferId,
+    )
+
+    if (newIndex !== -1) {
+      setCurrentIndex(newIndex)
+      // Opcional: volvemos a activar el autoplay para que
+      // siga rotando empezando desde el producto en oferta
+      setIsAutoPlaying(true)
+    }
+  }, [offersByProduct, currentIndex])
+
+  const handleProductClick = (product: (typeof featuredProducts)[0]) => {
     setSelectedProduct(product)
     setShowQuickView(true)
   }
 
   const goToNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % products.length)
+    setCurrentIndex((prev) => (prev + 1) % featuredProducts.length)
     setIsAutoPlaying(false)
   }
 
   const goToPrevious = () => {
-    setCurrentIndex((prev) => (prev - 1 + products.length) % products.length)
+    setCurrentIndex((prev) => (prev - 1 + featuredProducts.length) % featuredProducts.length)
     setIsAutoPlaying(false)
   }
 
@@ -161,10 +199,10 @@ export function ShopSection() {
   }
 
   const getVisibleProducts = () => {
-    const visible: { product: (typeof products)[0]; offset: number }[] = []
+    const visible: { product: (typeof featuredProducts)[0]; offset: number }[] = []
     for (let i = -1; i <= 1; i++) {
-      const index = (currentIndex + i + products.length) % products.length
-      visible.push({ product: products[index], offset: i })
+      const index = (currentIndex + i + featuredProducts.length) % featuredProducts.length
+      visible.push({ product: featuredProducts[index], offset: i })
     }
     return visible
   }
@@ -173,41 +211,46 @@ export function ShopSection() {
     <>
       <section
         id="tienda"
-        className="py-24 bg-gradient-to-b from-background to-secondary relative overflow-hidden"
+        className="relative py-20 md:py-24 overflow-hidden"
+        style={{
+          backgroundImage: "url('/fondos/fondo-tienda-ladrillo.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
       >
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-primary rounded-full blur-3xl" />
-        </div>
+        {/* Capa oscura para contraste */}
+        <div className="absolute inset-0 bg-black/45" />
 
-        <div className="container mx-auto px-4 relative z-10">
+        {/* Difuminado con sección anterior */}
+        <div className="pointer-events-none absolute -top-40 left-0 right-0 h-40 section-fade-light-to-dark z-10" />
+
+        <div className="container mx-auto px-4 relative z-20">
           {/* Header */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-3 mb-4">
-              <div className="h-1 w-12 bg-primary" />
-              <span className="text-primary font-semibold tracking-wider uppercase text-sm">
+          <div className="text-center mb-12 md:mb-16">
+            <div className="inline-flex items-center gap-3 mb-3">
+              <div className="h-1 w-10 bg-primary" />
+              <span className="text-primary font-semibold tracking-wider uppercase text-xs md:text-sm">
                 Más Vendidos
               </span>
-              <div className="h-1 w-12 bg-primary" />
+              <div className="h-1 w-10 bg-primary" />
             </div>
-            <h2 className="font-bebas text-5xl md:text-7xl text-foreground mb-4 tracking-tight">
+            <h2 className="font-bebas text-4xl md:text-5xl lg:text-6xl text-white mb-3 tracking-tight">
               PRODUCTOS <span className="text-primary">DESTACADOS</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Los favoritos de nuestra comunidad. Calidad premium para resultados
-              extraordinarios.
+            <p className="text-base md:text-lg text-gray-300 max-w-2xl mx-auto">
+              Los favoritos de nuestra comunidad. Calidad premium para resultados extraordinarios.
             </p>
           </div>
 
           {/* Carrusel 3D */}
-          <div className="relative max-w-7xl mx-auto mb-16">
-            <div className="relative h-[500px] md:h-[600px] flex items-center justify-center perspective-1000">
+          <div className="relative max-w-7xl mx-auto mb-12 md:mb-16">
+            <div className="relative h-[450px] md:h-[600px] flex items-center justify-center perspective-1000">
               {getVisibleProducts().map(({ product, offset }) => {
                 const calificacion =
                   calificaciones[product.id] || { promedio: 0, total: 0 }
                 const rating = calificacion.promedio
 
-                // ✅ Oferta activa para este producto (si existe)
                 const activeOffer = offersByProduct[product.id]
                 const displayPrice = activeOffer
                   ? activeOffer.currentPrice
@@ -225,7 +268,7 @@ export function ShopSection() {
                     className="absolute transition-all duration-700 ease-out cursor-pointer"
                     style={{
                       transform: `
-                        translateX(${offset * 380}px)
+                        translateX(${offset * 360}px)
                         translateZ(${offset === 0 ? 0 : -200}px)
                         scale(${offset === 0 ? 1 : 0.75})
                         rotateY(${offset * -15}deg)
@@ -236,78 +279,77 @@ export function ShopSection() {
                     }}
                     onClick={() => offset === 0 && handleProductClick(product)}
                   >
-                    <Card className="w-[340px] md:w-[400px] overflow-hidden border-2 border-border hover:border-primary transition-all duration-300 shadow-2xl bg-card">
+                    <Card className="w-[320px] md:w-[380px] overflow-hidden border-2 border-yellow-600/30 hover:border-primary transition-all duration-300 shadow-2xl bg-black/50 backdrop-blur-sm">
                       {product.bestseller && offset === 0 && (
                         <div className="absolute top-4 right-4 z-10">
-                          <div className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-xs font-bold shadow-lg flex items-center gap-1 animate-pulse">
+                          <div className="bg-primary text-black px-4 py-1.5 rounded-full text-[11px] font-bold shadow-lg flex items-center gap-1">
                             <Star className="w-3 h-3 fill-current" />
                             MÁS VENDIDO
                           </div>
                         </div>
                       )}
 
-                      <div className="relative overflow-hidden bg-muted aspect-square">
+                      <div className="relative overflow-hidden bg-black/70 aspect-square">
                         <img
                           src={product.image || "/placeholder.svg"}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <div className="absolute bottom-4 left-4">
-                          <span className="bg-primary/90 backdrop-blur-sm text-primary-foreground px-3 py-1 rounded-full text-xs font-bold">
+                        <div className="absolute bottom-4 left-4 space-x-2">
+                          <span className="bg-primary/90 backdrop-blur-sm text-black px-3 py-1 rounded-full text-xs font-bold">
                             {product.category}
                           </span>
+                          {discount && (
+                            <span className="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                              -{discount}%
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <CardContent className="p-6">
-                        {/* Calificación */}
-                        {product.type === "product" && (
-                          <div className="flex items-center gap-2 mb-2">
-                            <CalificacionEstrellas
-                              calificacion={rating}
-                              readonly
-                              tamano="sm"
-                              mostrarNumero
-                            />
-                            <span className="text-xs text-muted-foreground">
-                              {calificacion.total > 0
-                                ? `(${calificacion.total} reseñas)`
-                                : "(0 reseñas)"}
-                            </span>
-                          </div>
-                        )}
+                      <CardContent className="p-5 md:p-6">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CalificacionEstrellas
+                            calificacion={rating}
+                            readonly
+                            tamano="sm"
+                            mostrarNumero
+                          />
+                          <span className="text-[11px] text-gray-400">
+                            {calificacion.total > 0
+                              ? `(${calificacion.total} reseñas)`
+                              : "(0 reseñas)"}
+                          </span>
+                        </div>
 
-                        <h3 className="font-bold text-2xl mb-2 text-card-foreground">
+                        <h3 className="font-bold text-lg md:text-xl mb-1.5 text-white">
                           {product.name}
                         </h3>
-                        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+                        <p className="text-xs md:text-sm text-gray-300 mb-3 line-clamp-2">
                           {product.description}
                         </p>
 
                         <div className="flex items-center justify-between">
                           <div>
-                            <span className="text-xs text-muted-foreground block">
+                            <span className="text-[11px] text-gray-400 block">
                               Precio
                             </span>
-                            {/* 💰 Precio con oferta (si hay) */}
-                            <span className="font-bebas text-4xl text-primary">
+                            <span className="font-bebas text-3xl md:text-4xl text-primary">
                               ${displayPrice.toLocaleString("es-CO")}
                             </span>
-                            {originalPrice &&
-                              originalPrice !== displayPrice && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <span className="text-xs text-muted-foreground line-through">
-                                    ${originalPrice.toLocaleString("es-CO")}
+                            {originalPrice && originalPrice !== displayPrice && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-400 line-through">
+                                  ${originalPrice.toLocaleString("es-CO")}
+                                </span>
+                                {typeof discount === "number" && discount > 0 && (
+                                  <span className="text-[11px] font-semibold text-green-500">
+                                    -{discount}%
                                   </span>
-                                  {typeof discount === "number" &&
-                                    discount > 0 && (
-                                      <span className="text-xs font-semibold text-green-500">
-                                        -{discount}%
-                                      </span>
-                                    )}
-                                </div>
-                              )}
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           <Button
@@ -315,10 +357,10 @@ export function ShopSection() {
                               e.stopPropagation()
                               handleProductClick(product)
                             }}
-                            size="lg"
-                            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg hover:shadow-xl transition-all duration-300"
+                            size="sm"
+                            className="bg-primary hover:bg-primary/90 text-black font-bold shadow-lg hover:shadow-xl transition-all duration-300 px-4"
                           >
-                            <ShoppingCart className="mr-2 h-5 w-5" />
+                            <ShoppingCart className="mr-2 h-4 w-4" />
                             Comprar
                           </Button>
                         </div>
@@ -332,30 +374,30 @@ export function ShopSection() {
             {/* Flechas */}
             <button
               onClick={goToPrevious}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-primary/90 hover:bg-primary text-primary-foreground p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-primary/90 hover:bg-primary text-black p-3 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
               aria-label="Anterior"
             >
-              <ChevronLeft className="w-6 h-6" />
+              <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               onClick={goToNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-primary/90 hover:bg-primary text-primary-foreground p-4 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-primary/90 hover:bg-primary text-black p-3 rounded-full shadow-xl transition-all duration-300 hover:scale-110"
               aria-label="Siguiente"
             >
-              <ChevronRight className="w-6 h-6" />
+              <ChevronRight className="w-5 h-5" />
             </button>
           </div>
 
           {/* Puntos del carrusel */}
-          <div className="flex justify-center gap-3 mb-12">
-            {products.map((_, index) => (
+          <div className="flex justify-center gap-3 mb-10 md:mb-12">
+            {featuredProducts.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToSlide(index)}
                 className={`transition-all duration-300 rounded-full ${
                   index === currentIndex
-                    ? "w-12 h-3 bg-primary"
-                    : "w-3 h-3 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                    ? "w-10 h-2.5 bg-primary"
+                    : "w-2.5 h-2.5 bg-yellow-600/30 hover:bg-yellow-600/50"
                 }`}
                 aria-label={`Ir al producto ${index + 1}`}
               />
@@ -367,7 +409,7 @@ export function ShopSection() {
             <Link href="/tienda">
               <Button
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg px-8 py-6 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                className="bg-primary hover:bg-primary/90 text-black font-bold text-base md:text-lg px-7 md:px-8 py-5 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
               >
                 Ver Toda la Tienda
                 <ChevronRight className="ml-2 h-5 w-5" />
