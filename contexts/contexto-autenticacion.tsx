@@ -3,13 +3,12 @@
 import { createContext, useContext, useState, type ReactNode, useEffect } from "react"
 import { UserStorage } from "@/lib/almacenamiento-usuarios"
 
-// Interfaz simplificada SIN verificación estudiante
+// Interfaz simplificada
 interface User {
   id: string
   name: string
   lastName: string
   email: string
-  // ELIMINADO: propiedades de verificación estudiante
 }
 
 interface AuthContextType {
@@ -31,7 +30,7 @@ interface AuthContextType {
   setPendingAction: (action: (() => void) | null) => void
   refreshUser: () => Promise<void>
   forceRefreshUser: () => void
-  // ELIMINADO: checkVerificationStatus
+  
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -40,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null)
 
-  // ✅ MÉTODO SIMPLIFICADO: Forzar actualización inmediata del usuario
+  // ✅ MÉTODO SIMPLIFICADO
   const forceRefreshUser = () => {
     console.log("🔄 Forzando actualización completa del usuario...");
     const savedUser = localStorage.getItem("imperius_current_user");

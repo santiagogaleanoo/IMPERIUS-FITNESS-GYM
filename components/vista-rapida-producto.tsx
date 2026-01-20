@@ -348,7 +348,7 @@ export function ProductQuickView({ product, open, onOpenChange }: ProductQuickVi
       <CheckoutDialog
         open={showCheckout}
         onOpenChange={setShowCheckout}
-        items={checkoutItems} // 👈 aquí está la magia
+        items={checkoutItems}
         onSuccess={() => {
           setShowCheckout(false)
           onOpenChange(false)
