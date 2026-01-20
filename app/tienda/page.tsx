@@ -72,7 +72,7 @@ const allProducts = [
     id: "product-6",
     name: "Guantes de Entrenamiento",
     category: "Accesorios",
-    subcategory: "accesorios",
+    subcategory: "guantes-proteccion",
     price: 80000,
     image: "/black-and-gold-gym-training-gloves.jpg",
     description: "Guantes profesionales con agarre superior y protección",
@@ -105,7 +105,7 @@ const allProducts = [
     id: "product-9",
     name: "Shaker Premium",
     category: "Accesorios",
-    subcategory: "accesorios",
+    subcategory: "suplementacion",
     price: 60000,
     image: "/black-gold-protein-shaker-bottle.jpg",
     description: "Shaker de alta calidad con compartimentos",
@@ -116,7 +116,7 @@ const allProducts = [
     id: "product-10",
     name: "Cinturón de Levantamiento",
     category: "Accesorios",
-    subcategory: "accesorios",
+    subcategory: "levantamiento-pesas",
     price: 220000,
     image: "/black-leather-weightlifting-belt-gold-buckle.jpg",
     description: "Cinturón profesional de cuero para levantamiento",
@@ -171,7 +171,7 @@ const allProducts = [
     id: "product-15",
     name: "Straps de Levantamiento",
     category: "Accesorios",
-    subcategory: "accesorios",
+    subcategory: "levantamiento-pesas",
     price: 72000,
     image: "/black-gold-lifting-straps.jpg",
     description: "Straps profesionales para levantamiento pesado",
@@ -222,6 +222,17 @@ const allProducts = [
     type: "product" as const,
     features: ["90% de proteína", "Bajo en carbohidratos", "Sin lactosa", "Sabor fresa"],
   },
+  {
+    id: "product-20",
+    name: "Banda de Resistencia",
+    category: "Accesorios",
+    subcategory: "accesorios-entrenamiento",
+    price: 45000,
+    image: "/placeholder-resistance-band.jpg",
+    description: "Banda de resistencia para ejercicios funcionales",
+    type: "product" as const,
+    features: ["Múltiples niveles", "Material duradero", "Portátil", "Para todo el cuerpo"],
+  },
 ]
 
 // Categorías principales
@@ -248,6 +259,15 @@ const clothingSubcategories = [
   { value: "todos", label: "Toda la Ropa" },
   { value: "ropa-hombre", label: "Ropa de Hombre" },
   { value: "ropa-mujer", label: "Ropa de Mujer" },
+]
+
+// Nuevo: Subcategorías de Accesorios
+const accessorySubcategories = [
+  { value: "todos", label: "Todos los Accesorios" },
+  { value: "guantes-proteccion", label: "Guantes y Protección" },
+  { value: "suplementacion", label: "Suplementación" },
+  { value: "levantamiento-pesas", label: "Levantamiento de Pesas" },
+  { value: "accesorios-entrenamiento", label: "Accesorios de Entrenamiento" },
 ]
 
 export default function TiendaPage() {
@@ -314,7 +334,14 @@ export default function TiendaPage() {
   // Filtrado de productos
   const filteredProducts = allProducts.filter((product) => {
     if (selectedCategory === "todos") return true
-    if (selectedCategory === "Accesorios") return product.category === "Accesorios"
+    
+    if (selectedCategory === "Accesorios") {
+      if (selectedSubcategory === "todos") return product.category === "Accesorios"
+      return (
+        product.category === "Accesorios" &&
+        product.subcategory === selectedSubcategory
+      )
+    }
 
     if (selectedCategory === "Suplementos") {
       if (selectedSubcategory === "todos") return product.category === "Suplementos"
@@ -348,7 +375,12 @@ export default function TiendaPage() {
 
   const getCategoryLabel = () => {
     if (selectedCategory === "todos") return "Todos los Productos"
-    if (selectedCategory === "Accesorios") return "Todos los Accesorios"
+    
+    if (selectedCategory === "Accesorios") {
+      if (selectedSubcategory === "todos") return "Todos los Accesorios"
+      return accessorySubcategories.find((s) => s.value === selectedSubcategory)
+        ?.label
+    }
 
     if (selectedCategory === "Suplementos") {
       if (selectedSubcategory === "todos") return "Todos los Suplementos"
@@ -368,11 +400,12 @@ export default function TiendaPage() {
   const getSubcategories = () => {
     if (selectedCategory === "Suplementos") return supplementSubcategories
     if (selectedCategory === "Ropa") return clothingSubcategories
+    if (selectedCategory === "Accesorios") return accessorySubcategories
     return []
   }
 
   const showSubcategories =
-    selectedCategory === "Suplementos" || selectedCategory === "Ropa"
+    selectedCategory === "Suplementos" || selectedCategory === "Ropa" || selectedCategory === "Accesorios"
 
   return (
     <>
@@ -516,8 +549,7 @@ export default function TiendaPage() {
                           </span>
                         </div>
 
-                        {(product.category === "Suplementos" ||
-                          product.category === "Ropa") && (
+                        {product.category === "Suplementos" && (
                           <div className="absolute top-4 right-4">
                             <span className="bg-yellow-600/80 text-white px-2 py-1 rounded-full text-xs font-bold">
                               {product.subcategory === "proteina-limpia" &&
@@ -532,8 +564,26 @@ export default function TiendaPage() {
                                 "Pre Entreno"}
                               {product.subcategory === "aminoacidos" &&
                                 "Aminoácidos"}
+                            </span>
+                          </div>
+                        )}
+
+                        {product.category === "Ropa" && (
+                          <div className="absolute top-4 right-4">
+                            <span className="bg-yellow-600/80 text-white px-2 py-1 rounded-full text-xs font-bold">
                               {product.subcategory === "ropa-hombre" && "Hombre"}
                               {product.subcategory === "ropa-mujer" && "Mujer"}
+                            </span>
+                          </div>
+                        )}
+
+                        {product.category === "Accesorios" && (
+                          <div className="absolute top-4 right-4">
+                            <span className="bg-yellow-600/80 text-white px-2 py-1 rounded-full text-xs font-bold">
+                              {product.subcategory === "guantes-proteccion" && "Guantes"}
+                              {product.subcategory === "suplementacion" && "Suplementación"}
+                              {product.subcategory === "levantamiento-pesas" && "Pesas"}
+                              {product.subcategory === "accesorios-entrenamiento" && "Entrenamiento"}
                             </span>
                           </div>
                         )}
